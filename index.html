@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resourceful Idle</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div class="app-container">
+
+        <!-- HEADER: DINHEIRO -->
+        <header class="glass-panel">
+            <div class="header-content">
+                <h1>Resourceful Idle</h1>
+                <div class="money-display">
+                    <span class="currency">R$</span>
+                    <span id="money-value">0.00</span>
+                </div>
+            </div>
+        </header>
+
+        <main class="grid-layout">
+
+            <!-- INVENTÁRIO -->
+            <section class="glass-panel section-inventory">
+                <h2>📦 Inventário</h2>
+                <div class="resource-list">
+                    <div class="resource-item">
+                        <span class="resource-icon">🪵</span>
+                        <div class="resource-info">
+                            <span class="resource-name">Madeira Bruta</span>
+                            <span class="resource-count" id="inv-wood">0</span>
+                        </div>
+                        <div class="auto-sell-box hidden" id="box-sell-wood">
+                            <div class="sell-indicator-wrapper">
+                                <span class="sell-icon-bg">$</span>
+                                <span class="sell-icon-fill" id="ind-sell-wood">$</span>
+                            </div>
+                            <button class="btn-toggle-sell" id="tg-sell-wood">AUTO</button>
+                        </div>
+                        <button class="btn btn-sell" id="btn-sell-wood">Vender (R$ 1)</button>
+                    </div>
+
+                    <div class="resource-item">
+                        <span class="resource-icon">🪚</span>
+                        <div class="resource-info">
+                            <span class="resource-name">Tábua</span>
+                            <span class="resource-count" id="inv-board">0</span>
+                        </div>
+                        <div class="auto-sell-box hidden" id="box-sell-board">
+                            <div class="sell-indicator-wrapper">
+                                <span class="sell-icon-bg">$</span>
+                                <span class="sell-icon-fill" id="ind-sell-board">$</span>
+                            </div>
+                            <button class="btn-toggle-sell" id="tg-sell-board">AUTO</button>
+                        </div>
+                        <button class="btn btn-sell" id="btn-sell-board">Vender (R$ 5)</button>
+                    </div>
+
+                    <div class="resource-item">
+                        <span class="resource-icon">🪑</span>
+                        <div class="resource-info">
+                            <span class="resource-name">Móvel</span>
+                            <span class="resource-count" id="inv-furniture">0</span>
+                        </div>
+                        <div class="auto-sell-box hidden" id="box-sell-furniture">
+                            <div class="sell-indicator-wrapper">
+                                <span class="sell-icon-bg">$</span>
+                                <span class="sell-icon-fill" id="ind-sell-furniture">$</span>
+                            </div>
+                            <button class="btn-toggle-sell" id="tg-sell-furniture">AUTO</button>
+                        </div>
+                        <button class="btn btn-sell" id="btn-sell-furniture">Vender (R$ 25)</button>
+                    </div>
+
+                    <!-- RECURSOS DE PEDRA (Oculto no início) -->
+                    <div id="group-stone" class="hidden">
+                        <h3 style="margin-top: 10px; font-size: 0.9rem; color: var(--text-secondary);">Minerais</h3>
+
+                        <div class="resource-item" style="margin-top: 10px;">
+                            <span class="resource-icon">🪨</span>
+                            <div class="resource-info">
+                                <span class="resource-name">Pedra Bruta</span>
+                                <span class="resource-count" id="inv-stone">0</span>
+                            </div>
+                            <div class="auto-sell-box hidden" id="box-sell-stone">
+                                <div class="sell-indicator-wrapper">
+                                    <span class="sell-icon-bg">$</span>
+                                    <span class="sell-icon-fill" id="ind-sell-stone">$</span>
+                                </div>
+                                <button class="btn-toggle-sell" id="tg-sell-stone">AUTO</button>
+                            </div>
+                            <button class="btn btn-sell" id="btn-sell-stone">Vender (R$ 10)</button>
+                        </div>
+
+                        <div class="resource-item" style="margin-top: 10px;">
+                            <span class="resource-icon">🧱</span>
+                            <div class="resource-info">
+                                <span class="resource-name">Bloco de Pedra</span>
+                                <span class="resource-count" id="inv-stoneBlock">0</span>
+                            </div>
+                            <div class="auto-sell-box hidden" id="box-sell-stoneBlock">
+                                <div class="sell-indicator-wrapper">
+                                    <span class="sell-icon-bg">$</span>
+                                    <span class="sell-icon-fill" id="ind-sell-stoneBlock">$</span>
+                                </div>
+                                <button class="btn-toggle-sell" id="tg-sell-stoneBlock">AUTO</button>
+                            </div>
+                            <button class="btn btn-sell" id="btn-sell-stoneBlock">Vender (R$ 50)</button>
+                        </div>
+
+                        <div class="resource-item" style="margin-top: 10px;">
+                            <span class="resource-icon">🏗️</span>
+                            <div class="resource-info">
+                                <span class="resource-name">Material de Construção</span>
+                                <span class="resource-count" id="inv-constructionMat">0</span>
+                            </div>
+                            <div class="auto-sell-box hidden" id="box-sell-constructionMat">
+                                <div class="sell-indicator-wrapper">
+                                    <span class="sell-icon-bg">$</span>
+                                    <span class="sell-icon-fill" id="ind-sell-constructionMat">$</span>
+                                </div>
+                                <button class="btn-toggle-sell" id="tg-sell-constructionMat">AUTO</button>
+                            </div>
+                            <button class="btn btn-sell" id="btn-sell-constructionMat">Vender (R$ 150)</button>
+                        </div>
+                    </div>
+
+                </div>
+            </section>
+
+            <!-- AÇÕES MANUAIS -->
+            <section class="glass-panel section-actions">
+                <h2>✋ Ações Manuais</h2>
+                <div class="action-container">
+                    <button class="btn btn-primary btn-large click-effect" id="btn-chop-wood"
+                        style="user-select: none; -webkit-user-select: none;">
+                        <span class="icon">🪓</span>
+                        <span>Coletar Madeira</span>
+                    </button>
+                    <button class="btn btn-primary btn-large click-effect hidden" id="btn-mine-stone"
+                        style="user-select: none; -webkit-user-select: none; background: #6b7280;">
+                        <span class="icon">⛏️</span>
+                        <span>Coletar Pedra</span>
+                    </button>
+                    <button class="btn btn-secondary btn-large" id="btn-sell-all">
+                        <span class="icon">💰</span>
+                        <span>Vender Tudo</span>
+                    </button>
+                </div>
+            </section>
+
+            <!-- PRODUÇÃO (IDLE) -->
+            <section class="glass-panel section-production">
+                <h2>🏭 Linha de Produção</h2>
+                <div class="building-list">
+
+                    <!-- Lenhador Automático -->
+                    <div class="building-card">
+                        <div class="building-header">
+                            <div>
+                                <h3>Acampamento de Lenhadores</h3>
+                                <p class="building-desc">Gera 1 Madeira automaticamente.</p>
+                            </div>
+                            <span class="badge" id="count-woodcutter">0</span>
+                        </div>
+
+                        <div class="progress-container">
+                            <div class="progress-info">
+                                <span id="speed-woodcutter">2s / ciclo</span>
+                                <span id="status-woodcutter" class="status-working">Parado</span>
+                            </div>
+                            <div class="progress-bar-bg">
+                                <div class="progress-bar-fill" id="progress-woodcutter"></div>
+                            </div>
+                        </div>
+
+                        <div class="building-footer">
+                            <button class="btn btn-buy" id="btn-buy-woodcutter">
+                                Comprar (R$ <span id="cost-woodcutter">150.00</span>)
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Refinaria -->
+                    <div class="building-card">
+                        <div class="building-header">
+                            <div>
+                                <h3>Refinaria de Madeira</h3>
+                                <p class="building-desc">Converte 1 Madeira em 1 Tábua.</p>
+                            </div>
+                            <span class="badge" id="count-refinery">0</span>
+                        </div>
+
+                        <div class="progress-container">
+                            <div class="progress-info">
+                                <span id="speed-refinery">5s / ciclo</span>
+                                <span id="status-refinery" class="status-working">Parado (Sem recursos)</span>
+                            </div>
+                            <div class="progress-bar-bg">
+                                <div class="progress-bar-fill" id="progress-refinery"></div>
+                            </div>
+                        </div>
+
+                        <div class="building-footer">
+                            <button class="btn btn-buy" id="btn-buy-refinery">
+                                Comprar (R$ <span id="cost-refinery">10.00</span>)
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Carpintaria -->
+                    <div class="building-card">
+                        <div class="building-header">
+                            <div>
+                                <h3>Fábrica de Carpintaria</h3>
+                                <p class="building-desc">Converte 1 Tábua em 1 Móvel.</p>
+                            </div>
+                            <span class="badge" id="count-carpentry">0</span>
+                        </div>
+
+                        <div class="progress-container">
+                            <div class="progress-info">
+                                <span id="speed-carpentry">10s / ciclo</span>
+                                <span id="status-carpentry" class="status-working">Parado (Sem recursos)</span>
+                            </div>
+                            <div class="progress-bar-bg">
+                                <div class="progress-bar-fill" id="progress-carpentry"></div>
+                            </div>
+                        </div>
+
+                        <div class="building-footer">
+                            <button class="btn btn-buy" id="btn-buy-carpentry">
+                                Comprar (R$ <span id="cost-carpentry">50.00</span>)
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Mineiro de Pedra (Oculto) -->
+                    <div class="building-card hidden" id="card-stoneMiner">
+                        <div class="building-header">
+                            <div>
+                                <h3>Poço da Pedreira</h3>
+                                <p class="building-desc">Gera 1 Pedra automaticamente.</p>
+                            </div>
+                            <span class="badge" id="count-stoneMiner">0</span>
+                        </div>
+
+                        <div class="progress-container">
+                            <div class="progress-info">
+                                <span id="speed-stoneMiner">3s / ciclo</span>
+                                <span id="status-stoneMiner" class="status-working">Parado</span>
+                            </div>
+                            <div class="progress-bar-bg">
+                                <div class="progress-bar-fill" id="progress-stoneMiner"></div>
+                            </div>
+                        </div>
+
+                        <div class="building-footer">
+                            <button class="btn btn-buy" id="btn-buy-stoneMiner" style="background: #4b5563;">
+                                Comprar (R$ <span id="cost-stoneMiner">5000.00</span>)
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Forno de Pedra (Oculto) -->
+                    <div class="building-card hidden" id="card-stoneKiln">
+                        <div class="building-header">
+                            <div>
+                                <h3>Forno de Pedra</h3>
+                                <p class="building-desc">Converte 1 Pedra em 1 Bloco de Pedra.</p>
+                            </div>
+                            <span class="badge" id="count-stoneKiln">0</span>
+                        </div>
+
+                        <div class="progress-container">
+                            <div class="progress-info">
+                                <span id="speed-stoneKiln">8s / ciclo</span>
+                                <span id="status-stoneKiln" class="status-working">Parado</span>
+                            </div>
+                            <div class="progress-bar-bg">
+                                <div class="progress-bar-fill" id="progress-stoneKiln"></div>
+                            </div>
+                        </div>
+
+                        <div class="building-footer">
+                            <button class="btn btn-buy" id="btn-buy-stoneKiln" style="background: #4b5563;">
+                                Comprar (R$ <span id="cost-stoneKiln">10000.00</span>)
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Construtora Civil (Oculto) -->
+                    <div class="building-card hidden" id="card-builder">
+                        <div class="building-header">
+                            <div>
+                                <h3>Construtora Civil</h3>
+                                <p class="building-desc">Consome 1 Tábua e 1 Bloco de Pedra = 1 Mat. de Construção.</p>
+                            </div>
+                            <span class="badge" id="count-builder">0</span>
+                        </div>
+
+                        <div class="progress-container">
+                            <div class="progress-info">
+                                <span id="speed-builder">15s / ciclo</span>
+                                <span id="status-builder" class="status-working">Parado</span>
+                            </div>
+                            <div class="progress-bar-bg">
+                                <div class="progress-bar-fill" id="progress-builder"></div>
+                            </div>
+                        </div>
+
+                        <div class="building-footer">
+                            <button class="btn btn-buy" id="btn-buy-builder" style="background: #ea580c;">
+                                Comprar (R$ <span id="cost-builder">50000.00</span>)
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
+            </section>
+
+            <!-- UPGRADES (Invisível no início) -->
+            <section class="glass-panel section-upgrades hidden" id="panel-upgrades">
+                <h2>✨ Melhorias (Upgrades)</h2>
+                <div class="upgrade-list">
+
+                    <div class="upgrade-card" id="upg-sharp-saws">
+                        <div class="upgrade-icon">⚙️</div>
+                        <div class="upgrade-info">
+                            <h4>Serras Afiadas</h4>
+                            <p>Refinarias ficam 10% mais rápidas.</p>
+                            <button class="btn btn-upgrade" id="btn-upg-saws">Comprar (R$ 100)</button>
+                        </div>
+                    </div>
+
+                    <!-- Upgrade de Clique Contínuo (Oculto) -->
+                    <div class="upgrade-card hidden" id="upg-continuous">
+                        <div class="upgrade-icon">🖱️</div>
+                        <div class="upgrade-info">
+                            <h4>Clique Contínuo Lvl <span id="lvl-continuous">0</span></h4>
+                            <p>Segure o botão para coletar recursos! Aumenta velocidade.</p>
+                            <button class="btn btn-upgrade" id="btn-upg-continuous">Comprar (R$ <span
+                                    id="cost-continuous">500</span>)</button>
+                        </div>
+                    </div>
+
+                    <!-- Explorar Pedreira (Aparece com Madeira) -->
+                    <div class="upgrade-card" id="upg-stoneUnlock">
+                        <div class="upgrade-icon">⛰️</div>
+                        <div class="upgrade-info">
+                            <h4>Explorar Pedreira</h4>
+                            <p>Desbloqueia extração de pedras. Custa R$ 3k e 100 Móveis.</p>
+                            <button class="btn btn-upgrade" id="btn-upg-stoneUnlock">Desbloquear</button>
+                        </div>
+                    </div>
+
+                    <!-- Venda Inteligente (Aparece ao destravar upgrades) -->
+                    <div class="upgrade-card" id="upg-smartSell">
+                        <div class="upgrade-icon">📈</div>
+                        <div class="upgrade-info">
+                            <h4>Venda Inteligente</h4>
+                            <p>Permite ligar Venda Automática (Auto-Vende a cada 10s individualmente).</p>
+                            <button class="btn btn-upgrade" id="btn-upg-smartSell">Comprar (R$ 2,000)</button>
+                        </div>
+                    </div>
+
+                </div>
+            </section>
+
+        </main>
+
+        <!-- Notificações flutuantes -->
+        <div id="toast-container"></div>
+    </div>
+
+    <script src="js/game.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/main.js"></script>
+</body>
+
+</html>

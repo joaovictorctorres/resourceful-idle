@@ -1,0 +1,416 @@
+:root {
+    --bg-color: #0d1117;
+    --panel-bg: rgba(22, 27, 34, 0.7);
+    --panel-border: rgba(255, 255, 255, 0.1);
+    --text-primary: #c9d1d9;
+    --text-secondary: #8b949e;
+    --accent-blue: #58a6ff;
+    --accent-green: #2ea043;
+    --accent-green-hover: #3fb950;
+    --accent-gold: #e3b341;
+    --accent-danger: #f85149;
+    --btn-bg: #21262d;
+    --btn-hover: #30363d;
+    --font-main: 'Inter', sans-serif;
+    --glass-blur: blur(12px);
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    background-color: var(--bg-color);
+    background-image: radial-gradient(circle at top right, rgba(88, 166, 255, 0.1), transparent 40%),
+                      radial-gradient(circle at bottom left, rgba(46, 160, 67, 0.1), transparent 40%);
+    background-attachment: fixed;
+    color: var(--text-primary);
+    font-family: var(--font-main);
+    line-height: 1.5;
+    padding: 20px;
+    min-height: 100vh;
+}
+
+.app-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+/* Glassmorphism */
+.glass-panel {
+    background: var(--panel-bg);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--panel-border);
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+}
+
+/* Header */
+header {
+    display: flex;
+    justify-content: center;
+}
+
+.header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+}
+
+.header-content h1 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    background: linear-gradient(90deg, #58a6ff, #e3b341);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.money-display {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--accent-green);
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.currency {
+    font-size: 1.2rem;
+    color: var(--text-secondary);
+}
+
+/* Grid Layout */
+.grid-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto auto;
+    gap: 20px;
+}
+
+@media (max-width: 768px) {
+    .grid-layout {
+        grid-template-columns: 1fr;
+    }
+}
+
+h2 {
+    font-size: 1.2rem;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--panel-border);
+    color: #fff;
+}
+
+/* Botões */
+.btn {
+    background: var(--btn-bg);
+    color: var(--text-primary);
+    border: 1px solid var(--panel-border);
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-family: var(--font-main);
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.btn:hover:not(:disabled) {
+    background: var(--btn-hover);
+    border-color: var(--text-secondary);
+}
+
+.btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    filter: grayscale(100%);
+}
+
+.btn-primary {
+    background: var(--accent-blue);
+    color: #fff;
+    border: none;
+}
+.btn-primary:hover:not(:disabled) {
+    background: #408bf9;
+}
+
+.btn-secondary {
+    background: transparent;
+    border: 1px solid var(--accent-blue);
+    color: var(--accent-blue);
+}
+.btn-secondary:hover:not(:disabled) {
+    background: rgba(88, 166, 255, 0.1);
+}
+
+.btn-sell {
+    font-size: 0.85rem;
+    padding: 6px 12px;
+}
+
+.btn-large {
+    padding: 16px 24px;
+    font-size: 1.1rem;
+    width: 100%;
+}
+
+.btn-buy {
+    background: var(--accent-green);
+    color: white;
+    border: none;
+    width: 100%;
+}
+.btn-buy:hover:not(:disabled) {
+    background: var(--accent-green-hover);
+}
+
+.btn-upgrade {
+    background: var(--accent-gold);
+    color: #000;
+    border: none;
+}
+.btn-upgrade:hover:not(:disabled) {
+    background: #d4a73c;
+}
+
+/* Listas */
+.resource-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.resource-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: rgba(255, 255, 255, 0.03);
+    padding: 12px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.resource-info {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    margin-left: 12px;
+}
+
+.resource-name {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+.resource-count {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #fff;
+}
+
+.action-container {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* Construções */
+.building-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.building-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.building-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.building-header h3 {
+    font-size: 1.1rem;
+    color: #fff;
+}
+
+.building-desc {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+.badge {
+    background: var(--btn-bg);
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: var(--accent-blue);
+    border: 1px solid var(--panel-border);
+}
+
+/* Barras de Progresso */
+.progress-container {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin: 8px 0;
+}
+
+.progress-info {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+.progress-bar-bg {
+    width: 100%;
+    height: 8px;
+    background: var(--btn-bg);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.progress-bar-fill {
+    height: 100%;
+    background: var(--accent-blue);
+    width: 0%;
+    transition: width 0.1s linear;
+}
+
+/* Upgrades */
+.hidden {
+    display: none !important;
+}
+
+.upgrade-list {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+}
+
+.upgrade-card {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    padding: 12px;
+}
+
+.upgrade-icon {
+    font-size: 2rem;
+    background: var(--btn-bg);
+    padding: 12px;
+    border-radius: 50%;
+}
+
+.upgrade-info h4 {
+    color: var(--accent-gold);
+    margin-bottom: 4px;
+}
+
+.upgrade-info p {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+}
+
+/* Animations */
+.click-effect:active {
+    transform: scale(0.98);
+}
+
+.toast {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: var(--panel-bg);
+    color: #fff;
+    padding: 12px 24px;
+    border-radius: 8px;
+    border: 1px solid var(--accent-green);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+    animation: slideIn 0.3s ease forwards, fadeOut 0.3s ease 2.7s forwards;
+    z-index: 1000;
+}
+
+@keyframes slideIn {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes fadeOut {
+    from { opacity: 1; }
+    to { opacity: 0; }
+}
+
+/* Auto Sell UI */
+.auto-sell-box {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-right: 16px;
+}
+
+.btn-toggle-sell {
+    font-size: 0.7rem;
+    padding: 4px 8px;
+    border-radius: 4px;
+    border: 1px solid var(--panel-border);
+    background: var(--btn-bg);
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-weight: bold;
+    transition: all 0.2s;
+}
+
+.btn-toggle-sell.active {
+    background: rgba(46, 160, 67, 0.2);
+    border-color: var(--accent-green);
+    color: var(--accent-green);
+}
+
+.sell-indicator-wrapper {
+    position: relative;
+    font-size: 1.2rem;
+    font-weight: 800;
+    display: inline-block;
+    width: 14px;
+    text-align: center;
+}
+
+.sell-icon-bg {
+    color: rgba(255, 255, 255, 0.1);
+}
+
+.sell-icon-fill {
+    position: absolute;
+    top: 0;
+    left: 0;
+    color: var(--accent-green);
+    opacity: 0;
+}
