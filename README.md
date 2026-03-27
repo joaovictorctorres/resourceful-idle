@@ -47,6 +47,10 @@ Como o projeto utiliza tecnologias Nativas Web sem *Build Steps*, rodar o jogo �
 
 *Dica:* O estado do jogo é salvo automaticamente no `localStorage` do seu navegador. Você não perde o progresso se der refresh na página.
 
+## 🎮 Como jogar Online
+
+**[Jogar agora](https://resourceful-idle.vercel.app)**
+
 ---
 
 ## 🛣️ Roadmap / Próximos Passos
