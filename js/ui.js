@@ -4,6 +4,10 @@ class GameUI {
 
         // Referências DOM
         this.elMoney = document.getElementById('money-value');
+        this.btnSettings = document.getElementById('btn-settings');
+        this.modalSettings = document.getElementById('settings-modal');
+        this.btnCloseSettings = document.getElementById('btn-close-settings');
+        this.toggleBackground = document.getElementById('toggle-background');
 
         this.elInvWood = document.getElementById('inv-wood');
         this.elInvBoard = document.getElementById('inv-board');
@@ -34,7 +38,10 @@ class GameUI {
                 elCount: document.getElementById('count-woodcutter'),
                 elSpeed: document.getElementById('speed-woodcutter'),
                 elStatus: document.getElementById('status-woodcutter'),
-                barFill: document.getElementById('progress-woodcutter')
+                barFill: document.getElementById('progress-woodcutter'),
+                elStorage: document.getElementById('storage-woodcutter'),
+                btnCollect: document.getElementById('btn-collect-woodcutter'),
+                btnAuto: document.getElementById('btn-auto-woodcutter')
             },
             refinery: {
                 btnBuy: document.getElementById('btn-buy-refinery'),
@@ -42,7 +49,10 @@ class GameUI {
                 elCount: document.getElementById('count-refinery'),
                 elSpeed: document.getElementById('speed-refinery'),
                 elStatus: document.getElementById('status-refinery'),
-                barFill: document.getElementById('progress-refinery')
+                barFill: document.getElementById('progress-refinery'),
+                elStorage: document.getElementById('storage-refinery'),
+                btnCollect: document.getElementById('btn-collect-refinery'),
+                btnAuto: document.getElementById('btn-auto-refinery')
             },
             carpentry: {
                 btnBuy: document.getElementById('btn-buy-carpentry'),
@@ -50,7 +60,10 @@ class GameUI {
                 elCount: document.getElementById('count-carpentry'),
                 elSpeed: document.getElementById('speed-carpentry'),
                 elStatus: document.getElementById('status-carpentry'),
-                barFill: document.getElementById('progress-carpentry')
+                barFill: document.getElementById('progress-carpentry'),
+                elStorage: document.getElementById('storage-carpentry'),
+                btnCollect: document.getElementById('btn-collect-carpentry'),
+                btnAuto: document.getElementById('btn-auto-carpentry')
             },
             stoneMiner: {
                 btnBuy: document.getElementById('btn-buy-stoneMiner'),
@@ -58,7 +71,10 @@ class GameUI {
                 elCount: document.getElementById('count-stoneMiner'),
                 elSpeed: document.getElementById('speed-stoneMiner'),
                 elStatus: document.getElementById('status-stoneMiner'),
-                barFill: document.getElementById('progress-stoneMiner')
+                barFill: document.getElementById('progress-stoneMiner'),
+                elStorage: document.getElementById('storage-stoneMiner'),
+                btnCollect: document.getElementById('btn-collect-stoneMiner'),
+                btnAuto: document.getElementById('btn-auto-stoneMiner')
             },
             stoneKiln: {
                 btnBuy: document.getElementById('btn-buy-stoneKiln'),
@@ -66,7 +82,10 @@ class GameUI {
                 elCount: document.getElementById('count-stoneKiln'),
                 elSpeed: document.getElementById('speed-stoneKiln'),
                 elStatus: document.getElementById('status-stoneKiln'),
-                barFill: document.getElementById('progress-stoneKiln')
+                barFill: document.getElementById('progress-stoneKiln'),
+                elStorage: document.getElementById('storage-stoneKiln'),
+                btnCollect: document.getElementById('btn-collect-stoneKiln'),
+                btnAuto: document.getElementById('btn-auto-stoneKiln')
             },
             builder: {
                 btnBuy: document.getElementById('btn-buy-builder'),
@@ -74,7 +93,10 @@ class GameUI {
                 elCount: document.getElementById('count-builder'),
                 elSpeed: document.getElementById('speed-builder'),
                 elStatus: document.getElementById('status-builder'),
-                barFill: document.getElementById('progress-builder')
+                barFill: document.getElementById('progress-builder'),
+                elStorage: document.getElementById('storage-builder'),
+                btnCollect: document.getElementById('btn-collect-builder'),
+                btnAuto: document.getElementById('btn-auto-builder')
             }
         };
 
@@ -87,10 +109,17 @@ class GameUI {
         this.cardSaws = document.getElementById('upg-sharp-saws');
         this.btnUpgSaws = document.getElementById('btn-upg-saws');
 
-        this.upgContinuous = document.getElementById('upg-continuous');
-        this.btnUpgContinuous = document.getElementById('btn-upg-continuous');
-        this.lvlContinuous = document.getElementById('lvl-continuous');
-        this.costContinuous = document.getElementById('cost-continuous');
+        this.upgChainsaw = document.getElementById('upg-chainsaw');
+        this.btnUpgChainsaw = document.getElementById('btn-upg-chainsaw');
+        this.lvlChainsaw = document.getElementById('lvl-chainsaw');
+        this.costChainsaw = document.getElementById('cost-chainsaw');
+        this.speedChainsaw = document.getElementById('speed-chainsaw');
+
+        this.upgJackhammer = document.getElementById('upg-jackhammer');
+        this.btnUpgJackhammer = document.getElementById('btn-upg-jackhammer');
+        this.lvlJackhammer = document.getElementById('lvl-jackhammer');
+        this.costJackhammer = document.getElementById('cost-jackhammer');
+        this.speedJackhammer = document.getElementById('speed-jackhammer');
 
         this.upgStoneUnlock = document.getElementById('upg-stoneUnlock');
         this.btnUpgStoneUnlock = document.getElementById('btn-upg-stoneUnlock');
@@ -99,6 +128,8 @@ class GameUI {
         this.btnUpgSmartSell = document.getElementById('btn-upg-smartSell');
 
         this.autoSellItems = ['wood', 'board', 'furniture', 'stone', 'stoneBlock', 'constructionMat'];
+        
+        this.statsContainer = document.getElementById('stats-container');
 
         this.bindEvents();
     }
@@ -143,6 +174,19 @@ class GameUI {
             btn.addEventListener('contextmenu', e => e.preventDefault());
         };
 
+        // UI Settings
+        this.btnSettings.addEventListener('click', () => {
+            this.modalSettings.classList.remove('hidden');
+        });
+
+        this.btnCloseSettings.addEventListener('click', () => {
+            this.modalSettings.classList.add('hidden');
+        });
+
+        this.toggleBackground.addEventListener('change', () => {
+            this.game.toggleSetting();
+        });
+
         bindHoldActions(this.btnChopWood, 'wood');
         bindHoldActions(this.btnMineStone, 'stone');
 
@@ -170,6 +214,14 @@ class GameUI {
                 this.game.buyBuilding(id);
                 this.updateUI();
             });
+            this.buildings[id].btnCollect.addEventListener('click', () => {
+                this.game.collectOutput(id);
+                this.updateUI();
+            });
+            this.buildings[id].btnAuto.addEventListener('click', () => {
+                this.game.buyAutoCollect(id);
+                this.updateUI();
+            });
         });
 
         this.btnUpgSaws.addEventListener('click', () => {
@@ -177,8 +229,13 @@ class GameUI {
             this.updateUI();
         });
 
-        this.btnUpgContinuous.addEventListener('click', () => {
-            this.game.buyUpgrade('continuousClick');
+        this.btnUpgChainsaw.addEventListener('click', () => {
+            this.game.buyUpgrade('chainsaw');
+            this.updateUI();
+        });
+
+        this.btnUpgJackhammer.addEventListener('click', () => {
+            this.game.buyUpgrade('jackhammer');
             this.updateUI();
         });
 
@@ -199,6 +256,11 @@ class GameUI {
 
     updateUI() {
         const s = this.game.state;
+
+        // Settings Toggle Update
+        if (this.toggleBackground.checked !== s.settings.runInBackground) {
+            this.toggleBackground.checked = s.settings.runInBackground;
+        }
 
         // Dinheiro
         this.elMoney.innerText = this.formatMoney(s.money);
@@ -298,14 +360,27 @@ class GameUI {
             this.btnUpgSmartSell.disabled = s.money < 2000;
         }
 
-        // Continuous
+        // Chainsaw
         if (s.unlocks.continuousClick) {
-            this.upgContinuous.classList.remove('hidden');
-            this.lvlContinuous.innerText = s.upgrades.continuousClickLevel;
-            const continuousCost = this.game.getContinuousClickCost();
-            this.costContinuous.innerText = this.formatMoney(continuousCost);
-            this.btnUpgContinuous.disabled = s.money < continuousCost;
+            this.upgChainsaw.classList.remove('hidden');
+            this.lvlChainsaw.innerText = s.upgrades.chainsawLevel;
+            if (this.speedChainsaw && s.upgrades.chainsawLevel > 0) this.speedChainsaw.innerText = `(${s.upgrades.chainsawLevel}/seg)`;
+            const chainCost = this.game.getContinuousClickCost('chainsaw');
+            this.costChainsaw.innerText = this.formatMoney(chainCost);
+            this.btnUpgChainsaw.disabled = s.money < chainCost;
         }
+
+        // Jackhammer
+        if (s.unlocks.continuousClick && s.unlocks.stonePanel) {
+            this.upgJackhammer.classList.remove('hidden');
+            this.lvlJackhammer.innerText = s.upgrades.jackhammerLevel;
+            if (this.speedJackhammer && s.upgrades.jackhammerLevel > 0) this.speedJackhammer.innerText = `(${s.upgrades.jackhammerLevel}/seg)`;
+            const jackCost = this.game.getContinuousClickCost('jackhammer');
+            this.costJackhammer.innerText = this.formatMoney(jackCost);
+            this.btnUpgJackhammer.disabled = s.money < jackCost;
+        }
+        
+        this.renderStats();
     }
 
     updateBuildingUI(id, currentMoney, inputResourceCount) {
@@ -359,6 +434,23 @@ class GameUI {
             const pct = Math.min((bData.progress * 100), 100);
             ui.barFill.style.width = `${pct}%`;
         }
+
+        // --- Storage Management Visível ---
+        // Apenas oculta o container ou limpa os botões dependendo da propriedade autoCollect
+        if (bData.autoCollect) {
+            // Se comprou Autocoleta, o Estoque some visualmente e automatiza
+            ui.elStorage.parentElement.classList.add('hidden');
+        } else {
+            ui.elStorage.parentElement.classList.remove('hidden');
+            ui.elStorage.innerText = Math.floor(bData.storedOutput);
+            
+            // Botão Coletar
+            ui.btnCollect.disabled = bData.storedOutput < 1;
+            
+            // Botão Upgrade Autocoleta dinâmico
+            ui.btnAuto.innerText = `⭐️ Autocoleta (R$ ${this.formatMoney(bData.autoCollectCost)})`;
+            ui.btnAuto.disabled = currentMoney < bData.autoCollectCost;
+        }
     }
 
     showToast(message) {
@@ -374,5 +466,42 @@ class GameUI {
                 container.removeChild(toast);
             }
         }, 3000);
+    }
+    
+    renderStats() {
+        if (!this.statsContainer) return;
+        
+        const s = this.game.state;
+        const resources = [
+            { id: 'wood', name: 'Madeira', icon: '🪵' },
+            { id: 'board', name: 'Tábuas', icon: '🪚' },
+            { id: 'furniture', name: 'Móveis', icon: '🪑' },
+            { id: 'stone', name: 'Pedra', icon: '🪨' },
+            { id: 'stoneBlock', name: 'Blocos de Pedra', icon: '🧱' },
+            { id: 'constructionMat', name: 'Mat. Construção', icon: '🏗️' }
+        ];
+
+        let html = '';
+        resources.forEach(res => {
+            const collected = s.stats.totalCollected[res.id] || 0;
+            const earned = s.stats.totalEarned[res.id] || 0;
+            
+            if (collected > 0) {
+                html += `
+                    <div class="stat-card" style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; border: 1px solid var(--panel-border);">
+                        <div style="font-size: 1.5rem; margin-bottom: 5px;">${res.icon}</div>
+                        <h4 style="margin: 0 0 10px 0; color: white;">${res.name}</h4>
+                        <div style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 3px;">
+                            Coletados: <strong style="color: white;">${Math.floor(collected)}</strong>
+                        </div>
+                        <div style="font-size: 0.8rem; color: var(--text-secondary);">
+                            Lucro: <strong style="color: var(--accent-green);">R$ ${this.formatMoney(earned)}</strong>
+                        </div>
+                    </div>
+                `;
+            }
+        });
+        
+        this.statsContainer.innerHTML = html;
     }
 }

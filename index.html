@@ -12,16 +12,40 @@
 <body>
     <div class="app-container">
 
-        <!-- HEADER: DINHEIRO -->
         <header class="glass-panel">
             <div class="header-content">
                 <h1>Resourceful Idle</h1>
-                <div class="money-display">
-                    <span class="currency">R$</span>
-                    <span id="money-value">0.00</span>
+                <div class="header-controls">
+                    <button id="btn-settings" class="btn-icon" title="Configurações">⚙️</button>
+                    <div class="money-display">
+                        <span class="currency">R$</span>
+                        <span id="money-value">0.00</span>
+                    </div>
                 </div>
             </div>
         </header>
+
+        <!-- MODAL CONFIGURAÇÕES -->
+        <div id="settings-modal" class="modal hidden">
+            <div class="modal-content glass-panel">
+                <div class="modal-header">
+                    <h2>⚙️ Configurações</h2>
+                    <button id="btn-close-settings" class="btn-icon">❌</button>
+                </div>
+                <div class="modal-body">
+                    <div class="setting-item">
+                        <div>
+                            <h4>Rodar em Segundo Plano</h4>
+                            <p class="setting-desc">Progredir rapidamente ao voltar para o jogo após trocar de aba.</p>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" id="toggle-background">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <main class="grid-layout">
 
@@ -126,7 +150,7 @@
                                 </div>
                                 <button class="btn-toggle-sell" id="tg-sell-constructionMat">AUTO</button>
                             </div>
-                            <button class="btn btn-sell" id="btn-sell-constructionMat">Vender (R$ 150)</button>
+                            <button class="btn btn-sell" id="btn-sell-constructionMat">Vender (R$ 500)</button>
                         </div>
                     </div>
 
@@ -179,6 +203,14 @@
                             </div>
                         </div>
 
+                        <div class="storage-container">
+                            <div class="storage-info">Estoque Local: <span id="storage-woodcutter">0</span></div>
+                            <div class="storage-actions">
+                                <button class="btn btn-small" id="btn-collect-woodcutter">Coletar</button>
+                                <button class="btn btn-small btn-auto" id="btn-auto-woodcutter">⭐️ Autocoleta ($1.5k)</button>
+                            </div>
+                        </div>
+
                         <div class="building-footer">
                             <button class="btn btn-buy" id="btn-buy-woodcutter">
                                 Comprar (R$ <span id="cost-woodcutter">150.00</span>)
@@ -203,6 +235,14 @@
                             </div>
                             <div class="progress-bar-bg">
                                 <div class="progress-bar-fill" id="progress-refinery"></div>
+                            </div>
+                        </div>
+
+                        <div class="storage-container">
+                            <div class="storage-info">Estoque Local: <span id="storage-refinery">0</span></div>
+                            <div class="storage-actions">
+                                <button class="btn btn-small" id="btn-collect-refinery">Coletar</button>
+                                <button class="btn btn-small btn-auto" id="btn-auto-refinery">⭐️ Autocoleta ($1.5k)</button>
                             </div>
                         </div>
 
@@ -233,6 +273,14 @@
                             </div>
                         </div>
 
+                        <div class="storage-container">
+                            <div class="storage-info">Estoque Local: <span id="storage-carpentry">0</span></div>
+                            <div class="storage-actions">
+                                <button class="btn btn-small" id="btn-collect-carpentry">Coletar</button>
+                                <button class="btn btn-small btn-auto" id="btn-auto-carpentry">⭐️ Autocoleta ($1.5k)</button>
+                            </div>
+                        </div>
+
                         <div class="building-footer">
                             <button class="btn btn-buy" id="btn-buy-carpentry">
                                 Comprar (R$ <span id="cost-carpentry">50.00</span>)
@@ -257,6 +305,14 @@
                             </div>
                             <div class="progress-bar-bg">
                                 <div class="progress-bar-fill" id="progress-stoneMiner"></div>
+                            </div>
+                        </div>
+
+                        <div class="storage-container">
+                            <div class="storage-info">Estoque Local: <span id="storage-stoneMiner">0</span></div>
+                            <div class="storage-actions">
+                                <button class="btn btn-small" id="btn-collect-stoneMiner">Coletar</button>
+                                <button class="btn btn-small btn-auto" id="btn-auto-stoneMiner">⭐️ Autocoleta ($1.5k)</button>
                             </div>
                         </div>
 
@@ -287,6 +343,14 @@
                             </div>
                         </div>
 
+                        <div class="storage-container">
+                            <div class="storage-info">Estoque Local: <span id="storage-stoneKiln">0</span></div>
+                            <div class="storage-actions">
+                                <button class="btn btn-small" id="btn-collect-stoneKiln">Coletar</button>
+                                <button class="btn btn-small btn-auto" id="btn-auto-stoneKiln">⭐️ Autocoleta ($1.5k)</button>
+                            </div>
+                        </div>
+
                         <div class="building-footer">
                             <button class="btn btn-buy" id="btn-buy-stoneKiln" style="background: #4b5563;">
                                 Comprar (R$ <span id="cost-stoneKiln">10000.00</span>)
@@ -314,6 +378,14 @@
                             </div>
                         </div>
 
+                        <div class="storage-container">
+                            <div class="storage-info">Estoque Local: <span id="storage-builder">0</span></div>
+                            <div class="storage-actions">
+                                <button class="btn btn-small" id="btn-collect-builder">Coletar</button>
+                                <button class="btn btn-small btn-auto" id="btn-auto-builder">⭐️ Autocoleta</button>
+                            </div>
+                        </div>
+
                         <div class="building-footer">
                             <button class="btn btn-buy" id="btn-buy-builder" style="background: #ea580c;">
                                 Comprar (R$ <span id="cost-builder">50000.00</span>)
@@ -338,14 +410,24 @@
                         </div>
                     </div>
 
-                    <!-- Upgrade de Clique Contínuo (Oculto) -->
-                    <div class="upgrade-card hidden" id="upg-continuous">
-                        <div class="upgrade-icon">🖱️</div>
+                    <!-- Upgrades de Clique Contínuo (Oculto) -->
+                    <div class="upgrade-card hidden" id="upg-chainsaw">
+                        <div class="upgrade-icon">🪚</div>
                         <div class="upgrade-info">
-                            <h4>Clique Contínuo Lvl <span id="lvl-continuous">0</span></h4>
-                            <p>Segure o botão para coletar recursos! Aumenta velocidade.</p>
-                            <button class="btn btn-upgrade" id="btn-upg-continuous">Comprar (R$ <span
-                                    id="cost-continuous">500</span>)</button>
+                            <h4>Motosserra Lvl <span id="lvl-chainsaw">0</span> <span id="speed-chainsaw" style="font-size: 0.8em; color: var(--accent-green); margin-left:10px;"></span></h4>
+                            <p>Segure o botão para coletar madeira! Aumenta velocidade.</p>
+                            <button class="btn btn-upgrade" id="btn-upg-chainsaw">Comprar (R$ <span
+                                    id="cost-chainsaw">500</span>)</button>
+                        </div>
+                    </div>
+
+                    <div class="upgrade-card hidden" id="upg-jackhammer">
+                        <div class="upgrade-icon">🧨</div>
+                        <div class="upgrade-info">
+                            <h4>Britadeira Lvl <span id="lvl-jackhammer">0</span> <span id="speed-jackhammer" style="font-size: 0.8em; color: var(--accent-green); margin-left:10px;"></span></h4>
+                            <p>Segure o botão para coletar pedra! Aumenta velocidade.</p>
+                            <button class="btn btn-upgrade" id="btn-upg-jackhammer">Comprar (R$ <span
+                                    id="cost-jackhammer">500</span>)</button>
                         </div>
                     </div>
 
@@ -369,6 +451,14 @@
                         </div>
                     </div>
 
+                </div>
+            </section>
+
+            <!-- STATUS STATS TAB -->
+            <section class="glass-panel section-stats" id="panel-stats" style="grid-column: 1 / -1; margin-top:20px;">
+                <h2>📊 Estatísticas Globais</h2>
+                <div class="stats-grid" id="stats-container" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; margin-top: 15px;">
+                    <!-- Gerado Dinamicamente -->
                 </div>
             </section>
 

@@ -29,51 +29,81 @@ getDefaultState() {
                 stoneBlock: false,
                 constructionMat: false
             },
+            settings: {
+                runInBackground: false
+            },
             stats: {
                 totalWoodChopped: 0,
-                manualClicks: 0
+                manualClicks: 0,
+                totalCollected: {},
+                totalEarned: {}
             },
             buildings: {
                 woodcutter: {
                     count: 0,
                     baseCost: 150,
-                    baseTime: 2, // segundos para 1 ciclo
-                    progress: 0
+                    baseTime: 2, 
+                    progress: 0,
+                    storedOutput: 0,
+                    autoCollect: false,
+                    autoCollectCost: 1500,
+                    outputItem: 'wood'
                 },
                 refinery: {
                     count: 0,
                     baseCost: 10,
-                    baseTime: 5, // segundos para 1 ciclo
-                    progress: 0
+                    baseTime: 5,
+                    progress: 0,
+                    storedOutput: 0,
+                    autoCollect: false,
+                    autoCollectCost: 3000,
+                    outputItem: 'board'
                 },
                 carpentry: {
                     count: 0,
                     baseCost: 50,
                     baseTime: 10,
-                    progress: 0
+                    progress: 0,
+                    storedOutput: 0,
+                    autoCollect: false,
+                    autoCollectCost: 10000,
+                    outputItem: 'furniture'
                 },
                 stoneMiner: {
                     count: 0,
                     baseCost: 5000,
                     baseTime: 3,
-                    progress: 0
+                    progress: 0,
+                    storedOutput: 0,
+                    autoCollect: false,
+                    autoCollectCost: 30000,
+                    outputItem: 'stone'
                 },
                 stoneKiln: {
                     count: 0,
                     baseCost: 10000,
                     baseTime: 8,
-                    progress: 0
+                    progress: 0,
+                    storedOutput: 0,
+                    autoCollect: false,
+                    autoCollectCost: 75000,
+                    outputItem: 'stoneBlock'
                 },
                 builder: {
                     count: 0,
                     baseCost: 50000,
-                    baseTime: 15, // Consome 1 Tabua e 1 Bloco de Pedra p/ gerar 1 Material de Construção
-                    progress: 0
+                    baseTime: 15,
+                    progress: 0,
+                    storedOutput: 0,
+                    autoCollect: false,
+                    autoCollectCost: 200000,
+                    outputItem: 'constructionMat'
                 }
             },
             upgrades: {
-                sharpSaws: false, // Custava $100 -> +10% speed na refinaria
-                continuousClickLevel: 0
+                sharpSaws: false, 
+                chainsawLevel: 0,
+                jackhammerLevel: 0
             },
             unlocks: {
                 upgradesPanel: false,
@@ -114,13 +144,14 @@ chopWood() {
     this.state.inventory.wood++;
     this.state.stats.totalWoodChopped++;
     this.state.stats.manualClicks++;
+    this.state.stats.totalCollected['wood'] = (this.state.stats.totalCollected['wood'] || 0) + 1;
     this.checkUnlocks();
 }
 
 mineStone() {
     if (!this.state.unlocks.stonePanel) return;
     this.state.inventory.stone++;
-    // Se quiser adicionar stats de pedra minerada seria aqui
+    this.state.stats.totalCollected['stone'] = (this.state.stats.totalCollected['stone'] || 0) + 1;
 }
 
 sell(item) {
@@ -130,7 +161,7 @@ sell(item) {
         furniture: 25,
         stone: 10,
         stoneBlock: 50,
-        constructionMat: 150
+        constructionMat: 500
     };
 
     if (this.state.inventory[item] > 0) {
@@ -138,6 +169,9 @@ sell(item) {
         const earn = amount * prices[item];
         this.state.inventory[item] = 0;
         this.state.money += earn;
+        
+        // Track earning
+        this.state.stats.totalEarned[item] = (this.state.stats.totalEarned[item] || 0) + earn;
     }
 }
 
@@ -167,11 +201,18 @@ buyUpgrade(id) {
             this.state.money -= cost;
             this.state.upgrades.sharpSaws = true;
         }
-    } else if (id === 'continuousClick') {
-        const cost = this.getContinuousClickCost();
+    } else if (id === 'chainsaw') {
+        const cost = this.getContinuousClickCost('chainsaw');
         if (this.state.money >= cost && this.state.unlocks.continuousClick) {
             this.state.money -= cost;
-            this.state.upgrades.continuousClickLevel++;
+            this.state.upgrades.chainsawLevel++;
+        }
+    } else if (id === 'jackhammer') {
+        const cost = this.getContinuousClickCost('jackhammer');
+        // Só permite comprar se tiver destravado a pedra também (stonePanel)
+        if (this.state.money >= cost && this.state.unlocks.continuousClick && this.state.unlocks.stonePanel) {
+            this.state.money -= cost;
+            this.state.upgrades.jackhammerLevel++;
         }
     } else if (id === 'smartSell') {
         const cost = 2000;
@@ -188,9 +229,37 @@ toggleAutoSell(resource) {
     }
 }
 
-getContinuousClickCost() {
-    // Custo Inicial R$ 500, multiplicador x2.5 a cada nível
-    return 500 * Math.pow(2.5, this.state.upgrades.continuousClickLevel);
+getContinuousClickCost(type) {
+    if (type === 'chainsaw') {
+        return 500 * Math.pow(2.5, this.state.upgrades.chainsawLevel);
+    } else if (type === 'jackhammer') {
+        return 500 * Math.pow(2.5, this.state.upgrades.jackhammerLevel);
+    }
+    return 0;
+}
+
+toggleSetting() {
+    this.state.settings.runInBackground = !this.state.settings.runInBackground;
+}
+
+collectOutput(bId) {
+    const b = this.state.buildings[bId];
+    if (b.storedOutput > 0) {
+        this.state.inventory[b.outputItem] += b.storedOutput;
+        this.state.stats.totalCollected[b.outputItem] = (this.state.stats.totalCollected[b.outputItem] || 0) + b.storedOutput;
+        b.storedOutput = 0;
+    }
+}
+
+buyAutoCollect(id) {
+    const b = this.state.buildings[id];
+    const cost = b.autoCollectCost;
+    if (this.state.money >= cost && !b.autoCollect) {
+        this.state.money -= cost;
+        b.autoCollect = true;
+        // Se ela já tinha coisas estocadas quando comprou o Auto, joga diretamente pro inventário
+        this.collectOutput(id);
+    }
 }
 
 buyStoneUnlock() {
@@ -214,14 +283,20 @@ checkUnlocks() {
 
 // Lógica principal rodando no intervalo de tempo (dt em segundos)
 update(dt) {
-    // Lógica do clique contínuo
-    if (this.holdingAction && this.state.upgrades.continuousClickLevel > 0) {
-        const clicksPerSec = this.state.upgrades.continuousClickLevel;
-        this.holdProgress += dt;
-        while (this.holdProgress >= 1 / clicksPerSec) {
-            if (this.holdingAction === 'wood') this.chopWood();
-            if (this.holdingAction === 'stone') this.mineStone();
-            this.holdProgress -= 1 / clicksPerSec;
+    // Lógica do clique contínuo baseada na ação atual
+    if (this.holdingAction) {
+        let level = 0;
+        if (this.holdingAction === 'wood') level = this.state.upgrades.chainsawLevel;
+        if (this.holdingAction === 'stone') level = this.state.upgrades.jackhammerLevel;
+
+        if (level > 0) {
+            const clicksPerSec = level;
+            this.holdProgress += dt;
+            while (this.holdProgress >= 1 / clicksPerSec) {
+                if (this.holdingAction === 'wood') this.chopWood();
+                if (this.holdingAction === 'stone') this.mineStone();
+                this.holdProgress -= 1 / clicksPerSec;
+            }
         }
     }
 
@@ -267,7 +342,13 @@ processGenerator(id, outputResource, dt) {
     b.progress += speed * dt;
 
     while (b.progress >= 1) {
-        this.state.inventory[outputResource]++;
+        if (b.autoCollect) {
+            this.state.inventory[outputResource]++;
+            this.state.stats.totalCollected[outputResource] = (this.state.stats.totalCollected[outputResource] || 0) + 1;
+        } else {
+            b.storedOutput++;
+        }
+        
         if (outputResource === 'wood') {
             this.state.stats.totalWoodChopped++;
         }
@@ -292,9 +373,14 @@ processBuilding(id, inputResource, outputResource, dt) {
     // Processa todos os itens completos acumulados no progresso
     while (b.progress >= 1 && this.state.inventory[inputResource] > 0) {
         this.state.inventory[inputResource]--;
-        this.state.inventory[outputResource]++;
+        
+        if (b.autoCollect) {
+            this.state.inventory[outputResource]++;
+            this.state.stats.totalCollected[outputResource] = (this.state.stats.totalCollected[outputResource] || 0) + 1;
+        } else {
+            b.storedOutput++;
+        }
 
-        // Para madeira, não contamos como "chopped" pois já foi cortada manualmente.
         b.progress -= 1;
     }
 
@@ -339,7 +425,14 @@ processComplexBuilding(bId, inputsArray, outputResource, dt) {
             for (const input of inputsArray) {
                 this.state.inventory[input.id] -= input.qty;
             }
-            this.state.inventory[outputResource]++;
+
+            if (b.autoCollect) {
+                this.state.inventory[outputResource]++;
+                this.state.stats.totalCollected[outputResource] = (this.state.stats.totalCollected[outputResource] || 0) + 1;
+            } else {
+                b.storedOutput++;
+            }
+
             b.progress -= 1;
         } else {
             b.progress = 1;
@@ -365,7 +458,12 @@ load() {
             // Deep merge de correções
             this.state.inventory = { ...this.getDefaultState().inventory, ...saveObj.inventory };
             this.state.autoSell = { ...this.getDefaultState().autoSell, ...saveObj.autoSell };
+            this.state.settings = { ...this.getDefaultState().settings, ...saveObj.settings };
+            
             this.state.stats = { ...this.getDefaultState().stats, ...saveObj.stats };
+            this.state.stats.totalCollected = { ...this.getDefaultState().stats.totalCollected, ...(saveObj.stats?.totalCollected || {}) };
+            this.state.stats.totalEarned = { ...this.getDefaultState().stats.totalEarned, ...(saveObj.stats?.totalEarned || {}) };
+            
             this.state.unlocks = { ...this.getDefaultState().unlocks, ...saveObj.unlocks };
             this.state.upgrades = { ...this.getDefaultState().upgrades, ...saveObj.upgrades };
 

@@ -17,8 +17,8 @@ document.addEventListener('DOMContentLoaded', () => {
         let dt = (currentTime - lastTime) / 1000;
 
         // Cap limite para evitar avanços absurdos (ex: ficou 2 horas com aba inativa)
-        // Em um jogo real você daria "Offlime Progress", mas para o MVP iremos limitar
-        if (dt > 1) {
+        // Se runInBackground estiver desativado, limitamos a 1 segundo.
+        if (dt > 1 && !game.state.settings.runInBackground) {
             dt = 1;
         }
 
