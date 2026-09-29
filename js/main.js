@@ -4,6 +4,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const game = new IdleGame();
     game.load(); // Tenta carregar do localStorage
 
+    // Referência para depuração pelo console (window.gameRef.state.money = 1000)
+    // e para o smoke test de UI.
+    window.gameRef = game;
+
     // Inicia a UI
     const ui = new GameUI(game);
 
@@ -12,10 +16,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // pagaria o mesmo período duas vezes.
     const offline = game.applyOfflineProgress();
 
-    ui.updateUI(); // Força a primeira renderização visual
+    ui.selectTab('producao'); // revela o painel e marca aria-selected
+    ui.updateUI(true);         // força a primeira renderização visual
     if (offline) {
         ui.showWelcomeBack(offline);
-        ui.updateUI(true); // production offline mudou as estatísticas de uma vez
+        ui.updateUI(true); // produção offline mudou as estatísticas de uma vez
     }
 
     // Game Loop usando requestAnimationFrame customizado para Tick
