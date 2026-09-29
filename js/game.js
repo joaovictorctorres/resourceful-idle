@@ -2,6 +2,24 @@
 const OFFLINE_CAP_SECONDS = 8 * 60 * 60;
 const OFFLINE_MAX_CHUNKS = 240;
 
+// Estado de um prédio: só os 4 campos mutáveis. Config estática (custo, tempo,
+// insumo, saída) vem de BUILDINGS — ver load() para por quê.
+function freshBuilding() {
+    return { count: 0, progress: 0, storedOutput: 0, autoCollect: false };
+}
+
+function zeroedFor(keys) {
+    return Object.fromEntries(keys.map(k => [k, 0]));
+}
+
+function falsesFor(keys) {
+    return Object.fromEntries(keys.map(k => [k, false]));
+}
+
+function freshBuildings() {
+    return Object.fromEntries(Object.keys(BUILDINGS).map(id => [id, freshBuilding()]));
+}
+
 class IdleGame {
     constructor() {
         this.version = "1.2.0";
@@ -10,29 +28,15 @@ class IdleGame {
         this.autoSellTimer = 0;
         this.achievementTimer = 0;
 
-    // Estado Inicial
-    this.state = this.getDefaultState();
-}
+        // Estado Inicial
+        this.state = this.getDefaultState();
+    }
 
-getDefaultState() {
+    getDefaultState() {
         return {
             money: 0,
-            inventory: {
-                wood: 0,
-                board: 0,
-                furniture: 0,
-                stone: 0,
-                stoneBlock: 0,
-                constructionMat: 0
-            },
-            autoSell: {
-                wood: false,
-                board: false,
-                furniture: false,
-                stone: false,
-                stoneBlock: false,
-                constructionMat: false
-            },
+            inventory: zeroedFor(Object.keys(RESOURCES)),
+            autoSell: falsesFor(Object.keys(RESOURCES)),
             settings: {
                 runInBackground: false
             },
@@ -42,70 +46,9 @@ getDefaultState() {
                 totalCollected: {},
                 totalEarned: {}
             },
-            buildings: {
-                woodcutter: {
-                    count: 0,
-                    baseCost: 150,
-                    baseTime: 2, 
-                    progress: 0,
-                    storedOutput: 0,
-                    autoCollect: false,
-                    autoCollectCost: 1500,
-                    outputItem: 'wood'
-                },
-                refinery: {
-                    count: 0,
-                    baseCost: 10,
-                    baseTime: 5,
-                    progress: 0,
-                    storedOutput: 0,
-                    autoCollect: false,
-                    autoCollectCost: 3000,
-                    outputItem: 'board'
-                },
-                carpentry: {
-                    count: 0,
-                    baseCost: 50,
-                    baseTime: 10,
-                    progress: 0,
-                    storedOutput: 0,
-                    autoCollect: false,
-                    autoCollectCost: 10000,
-                    outputItem: 'furniture'
-                },
-                stoneMiner: {
-                    count: 0,
-                    baseCost: 5000,
-                    baseTime: 3,
-                    progress: 0,
-                    storedOutput: 0,
-                    autoCollect: false,
-                    autoCollectCost: 30000,
-                    outputItem: 'stone'
-                },
-                stoneKiln: {
-                    count: 0,
-                    baseCost: 10000,
-                    baseTime: 8,
-                    progress: 0,
-                    storedOutput: 0,
-                    autoCollect: false,
-                    autoCollectCost: 75000,
-                    outputItem: 'stoneBlock'
-                },
-                builder: {
-                    count: 0,
-                    baseCost: 50000,
-                    baseTime: 15,
-                    progress: 0,
-                    storedOutput: 0,
-                    autoCollect: false,
-                    autoCollectCost: 200000,
-                    outputItem: 'constructionMat'
-                }
-            },
+            buildings: freshBuildings(),
             upgrades: {
-                sharpSaws: false, 
+                sharpSaws: false,
                 chainsawLevel: 0,
                 jackhammerLevel: 0
             },
@@ -118,25 +61,42 @@ getDefaultState() {
             achievements: {},
             lastSaveTimestamp: 0
         };
-}
+    }
 
-getBuildingCost(id) {
-    const b = this.state.buildings[id];
-    return b.baseCost * Math.pow(1.15, b.count);
-}
+    getBuildingCost(id) {
+        const b = this.state.buildings[id];
+        return BUILDINGS[id].baseCost * Math.pow(1.15, b.count);
+    }
 
 getBuildingSpeed(id) {
     const b = this.state.buildings[id];
     if (b.count === 0) return 0;
 
     let speedMultiplier = 1.0;
-    if (id === 'refinery' && this.state.upgrades.sharpSaws) {
-        speedMultiplier = 1.1; // 10% mais rápido!
+    for (const u of BUILDINGS[id].speedUpgrades || []) {
+        if (this.state.upgrades[u.id]) speedMultiplier *= u.mult;
     }
     speedMultiplier *= 1 + this.getAchievementBonus();
 
     // Itens por segundo = Quantidade * Multiplicador / Tempo Base
-    return (b.count * speedMultiplier) / b.baseTime;
+    return (b.count * speedMultiplier) / BUILDINGS[id].baseTime;
+}
+
+// Quanto de um recurso entra por segundo, somando todos os prédios que o produzem.
+// É o número que a barra de recursos mostra; antes ele não existia em lugar nenhum.
+getResourceRate(id) {
+    let rate = 0;
+    for (const bId in BUILDINGS) {
+        const def = BUILDINGS[bId];
+        if (def.output !== id) continue;
+        if (this.isBuildingUnlocked(bId)) rate += this.getBuildingSpeed(bId);
+    }
+    return rate;
+}
+
+isBuildingUnlocked(id) {
+    const req = BUILDINGS[id].requires;
+    return !req || !!this.state.unlocks[req];
 }
 
 // Bônus acumulado das conquistas. Conta os ids desbloqueados em vez de manter um
@@ -179,35 +139,27 @@ mineStone() {
 }
 
 sell(item) {
-    const prices = {
-        wood: 1,
-        board: 5,
-        furniture: 25,
-        stone: 10,
-        stoneBlock: 50,
-        constructionMat: 500
-    };
+    // Id desconhecido não pode virar `amount * undefined` = NaN, que infectaria
+    // money permanentemente (e sobrevive no save).
+    const def = RESOURCES[item];
+    if (!def) return;
 
     if (this.state.inventory[item] > 0) {
         const amount = this.state.inventory[item];
-        const earn = amount * prices[item];
+        const earn = amount * def.price;
         this.state.inventory[item] = 0;
         this.state.money += earn;
-        
+
         // Track earning
         this.state.stats.totalEarned[item] = (this.state.stats.totalEarned[item] || 0) + earn;
     }
 }
 
+// Sem gate de unlock: seguir o precedente do auto-sell (que nunca gateou). Sem o
+// unlock o jogador não tem como obter esses recursos — mineStone() retorna cedo e
+// os prédios de pedra são `requires`-gated.
 sellAll() {
-    this.sell('wood');
-    this.sell('board');
-    this.sell('furniture');
-    if (this.state.unlocks.stonePanel) {
-        this.sell('stone');
-        this.sell('stoneBlock');
-        this.sell('constructionMat');
-    }
+    for (const id in RESOURCES) this.sell(id);
 }
 
 buyBuilding(id) {
@@ -268,16 +220,17 @@ toggleSetting() {
 
 collectOutput(bId) {
     const b = this.state.buildings[bId];
+    const out = BUILDINGS[bId].output;
     if (b.storedOutput > 0) {
-        this.state.inventory[b.outputItem] += b.storedOutput;
-        this.state.stats.totalCollected[b.outputItem] = (this.state.stats.totalCollected[b.outputItem] || 0) + b.storedOutput;
+        this.state.inventory[out] += b.storedOutput;
+        this.state.stats.totalCollected[out] = (this.state.stats.totalCollected[out] || 0) + b.storedOutput;
         b.storedOutput = 0;
     }
 }
 
 buyAutoCollect(id) {
     const b = this.state.buildings[id];
-    const cost = b.autoCollectCost;
+    const cost = BUILDINGS[id].autoCollectCost;
     if (this.state.money >= cost && !b.autoCollect) {
         this.state.money -= cost;
         b.autoCollect = true;
@@ -340,22 +293,12 @@ update(dt) {
         }
     }
 
-    // Geradores Automáticos
-    this.processGenerator('woodcutter', 'wood', dt);
-    
-    if (this.state.unlocks.stonePanel) {
-        this.processGenerator('stoneMiner', 'stone', dt);
-        this.processBuilding('stoneKiln', 'stone', 'stoneBlock', dt);
-        // Novo prédio complexo Construtora: consume [{res:'board', qty:1}, {res:'stoneBlock', qty:1}]
-        this.processComplexBuilding('builder', [
-            { id: 'board', qty: 1 }, 
-            { id: 'stoneBlock', qty: 1 }
-        ], 'constructionMat', dt);
+    // Prédios, na ordem de declaração de BUILDINGS — que é a ordem de
+    // processamento original. Não reordenar sem pensar (ver comentário no data.js).
+    for (const id in BUILDINGS) {
+        if (this.isBuildingUnlocked(id)) this.processBuilding(id, dt);
     }
 
-    // Processadores de Material
-    this.processBuilding('refinery', 'wood', 'board', dt);
-    this.processBuilding('carpentry', 'board', 'furniture', dt);
     this.checkUnlocks();
 
     // Conquistas: 1x por segundo, não a cada frame. As condições varrem o state
@@ -387,111 +330,53 @@ checkAchievements() {
     }
     return unlocked;
 }
+    // Uma função só para gerador, processador e edifício complexo: o que os
+    // distingue é só a lista de insumos. inputs: [] = gerador.
+    //
+    // A ordem de chamada dentro de update() importa: em um tick, um produtor vem
+    // antes do consumidor, então o que ele acabou de produzir ainda conta como
+    // insumo disponível no mesmo passo.
+    processBuilding(id, dt) {
+        const b = this.state.buildings[id];
+        const def = BUILDINGS[id];
+        const speed = this.getBuildingSpeed(id);
+        if (speed === 0) return;
 
-processGenerator(id, outputResource, dt) {
-    const b = this.state.buildings[id];
-    const speed = this.getBuildingSpeed(id);
+        const inv = this.state.inventory;
+        const hasInputs = () => def.inputs.every(i => inv[i.id] >= i.qty);
 
-    if (speed === 0) return;
-
-    b.progress += speed * dt;
-
-    while (b.progress >= 1) {
-        if (b.autoCollect) {
-            this.state.inventory[outputResource]++;
-            this.state.stats.totalCollected[outputResource] = (this.state.stats.totalCollected[outputResource] || 0) + 1;
-        } else {
-            b.storedOutput++;
-        }
-        
-        if (outputResource === 'wood') {
-            this.state.stats.totalWoodChopped++;
-        }
-        b.progress -= 1;
-    }
-}
-
-processBuilding(id, inputResource, outputResource, dt) {
-    const b = this.state.buildings[id];
-    const speed = this.getBuildingSpeed(id);
-
-    if (speed === 0) return;
-
-    // Limita o progresso se não houver recursos
-    if (this.state.inventory[inputResource] > 0) {
-        b.progress += speed * dt;
-    }
-
-    // Processa todos os itens completos acumulados no progresso
-    while (b.progress >= 1 && this.state.inventory[inputResource] > 0) {
-        this.state.inventory[inputResource]--;
-        
-        if (b.autoCollect) {
-            this.state.inventory[outputResource]++;
-            this.state.stats.totalCollected[outputResource] = (this.state.stats.totalCollected[outputResource] || 0) + 1;
-        } else {
-            b.storedOutput++;
+        if (hasInputs()) {
+            b.progress += speed * dt;
+        } else if (def.inputs.length > 0) {
+            // Acabou insumo no meio do processamento: capa em 1 e fica na beira
+            // aguardando. Sem isso sobraria progresso bancado que pagaria de uma
+            // vez quando o insumo voltasse.
+            if (b.progress > 1) b.progress = 1;
         }
 
-        b.progress -= 1;
-    }
-
-    // Se após esgotar o inventário ainda sobrou progresso mas não tem insumo
-    if (this.state.inventory[inputResource] === 0 && b.progress > 1) {
-        b.progress = 1; // Fica na beira aguardando recurso
-    }
-}
-
-// Lógica de edifício complexo que exige N insumos simultaneamente
-processComplexBuilding(bId, inputsArray, outputResource, dt) {
-    const b = this.state.buildings[bId];
-    const speed = this.getBuildingSpeed(bId);
-
-    if (speed === 0) return;
-
-    // Checa se todos os insumos mínimos existem
-    let hasAllInputs = true;
-    for (const input of inputsArray) {
-        if (this.state.inventory[input.id] < input.qty) {
-            hasAllInputs = false;
-            break;
-        }
-    }
-
-    if (hasAllInputs) {
-        b.progress += speed * dt;
-    } else if (b.progress > 1) {
-        b.progress = 1;
-    }
-
-    // Checagem segura caso gere rápido demais
-    while (b.progress >= 1) {
-        let confirmHasInputs = true;
-        for (const input of inputsArray) {
-            if (this.state.inventory[input.id] < input.qty) {
-                confirmHasInputs = false;
-            }
-        }
-        
-        if (confirmHasInputs) {
-            for (const input of inputsArray) {
-                this.state.inventory[input.id] -= input.qty;
-            }
+        while (b.progress >= 1 && hasInputs()) {
+            for (const i of def.inputs) inv[i.id] -= i.qty;
 
             if (b.autoCollect) {
-                this.state.inventory[outputResource]++;
-                this.state.stats.totalCollected[outputResource] = (this.state.stats.totalCollected[outputResource] || 0) + 1;
+                inv[def.output]++;
+                this.state.stats.totalCollected[def.output] =
+                    (this.state.stats.totalCollected[def.output] || 0) + 1;
             } else {
                 b.storedOutput++;
             }
 
+            // Fora do if/else de propósito: o stat conta a produção do prédio,
+            // não a coleta. Movê-lo para dentro pararia de contar lenha assim que
+            // o jogador comprasse autocoleta, e é ele que destrava checkUnlocks().
+            if (def.trackStat) this.state.stats[def.trackStat]++;
+
             b.progress -= 1;
-        } else {
+        }
+
+        if (def.inputs.length > 0 && !hasInputs() && b.progress > 1) {
             b.progress = 1;
-            break;
         }
     }
-}
 
 // Progresso Offline
 //
@@ -585,14 +470,19 @@ load() {
             this.state.unlocks = { ...this.getDefaultState().unlocks, ...saveObj.unlocks };
             this.state.upgrades = { ...this.getDefaultState().upgrades, ...saveObj.upgrades };
 
-            // Merge de buildings individualmente
-            const defaultBuildings = this.getDefaultState().buildings;
-            for (const key in defaultBuildings) {
-                if (saveObj.buildings && saveObj.buildings[key]) {
-                    this.state.buildings[key] = { ...defaultBuildings[key], ...saveObj.buildings[key] };
-                } else {
-                    this.state.buildings[key] = { ...defaultBuildings[key] };
-                }
+            // Só os 4 campos mutáveis vêm do save. Com {...default, ...save}, um
+            // save antigo carregando baseCost: 5000 sombrearia o data.js para
+            // sempre — da próxima vez que o custo mudasse na tabela, todo jogador
+            // que voltasse manteria o antigo em silêncio.
+            this.state.buildings = {};
+            for (const id in BUILDINGS) {
+                const s = saveObj.buildings?.[id] || {};
+                this.state.buildings[id] = {
+                    count: s.count || 0,
+                    progress: s.progress || 0,
+                    storedOutput: s.storedOutput || 0,
+                    autoCollect: !!s.autoCollect
+                };
             }
         } catch (e) {
             console.error("Save corrompido, iniciando novo jogo.");

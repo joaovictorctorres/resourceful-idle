@@ -63,13 +63,19 @@ function makeGame(savedState, store) {
     vm.runInContext(
         dataSrc + '\n' + gameSrc +
         '\nglobalThis.IdleGame = IdleGame; globalThis.ACHIEVEMENTS = ACHIEVEMENTS;' +
-        ' globalThis.ACHIEVEMENT_BONUS = ACHIEVEMENT_BONUS;',
+        ' globalThis.ACHIEVEMENT_BONUS = ACHIEVEMENT_BONUS;' +
+        ' globalThis.RESOURCES = RESOURCES; globalThis.BUILDINGS = BUILDINGS;' +
+        ' globalThis.GROUPS = GROUPS;',
         sandbox
     );
 
     const game = new sandbox.IdleGame();
     if (savedState || store[SAVE_KEY]) game.load();
-    return { game, store, sandbox, ACHIEVEMENTS: sandbox.ACHIEVEMENTS, ACHIEVEMENT_BONUS: sandbox.ACHIEVEMENT_BONUS };
+    return {
+        game, store, sandbox,
+        ACHIEVEMENTS: sandbox.ACHIEVEMENTS, ACHIEVEMENT_BONUS: sandbox.ACHIEVEMENT_BONUS,
+        RESOURCES: sandbox.RESOURCES, BUILDINGS: sandbox.BUILDINGS, GROUPS: sandbox.GROUPS
+    };
 }
 
 // ---------------------------------------------------------------- save / load
@@ -470,6 +476,200 @@ check('dados das conquistas são consistentes', () => {
         assert(a.id && a.name && a.desc && a.icon, `conquista incompleta: ${JSON.stringify(a)}`);
         assert(!seen.has(a.id), `id duplicado: ${a.id}`);
         seen.add(a.id);
+    }
+});
+
+// ------------------------------------------------------- integridade de dados
+
+check('dados de recursos e construções são consistentes', () => {
+    const { RESOURCES, BUILDINGS, GROUPS } = makeGame();
+
+    for (const id in RESOURCES) {
+        const r = RESOURCES[id];
+        assert(r.name && r.short && r.icon, `recurso incompleto: ${id}`);
+        assert(r.price > 0, `preço inválido em ${id}: ${r.price}`);
+        assert(GROUPS[r.group], `grupo inexistente: ${r.group}`);
+    }
+
+    for (const id in BUILDINGS) {
+        const b = BUILDINGS[id];
+        assert(b.name && b.icon, `prédio incompleto: ${id}`);
+        assert(GROUPS[b.group], `grupo inexistente: ${id} -> ${b.group}`);
+        assert(RESOURCES[b.output], `saída inexistente: ${id} -> ${b.output}`);
+        for (const i of b.inputs) {
+            assert(RESOURCES[i.id], `insumo inexistente: ${id} -> ${i.id}`);
+            assert(i.qty > 0, `qty inválido: ${id} -> ${i.id} = ${i.qty}`);
+        }
+        assert(b.baseCost > 0, `baseCost inválido: ${id}`);
+        assert(b.baseTime > 0, `baseTime inválido: ${id}`);
+        assert(b.autoCollectCost > 0, `autoCollectCost inválido: ${id}`);
+        // Um prédio não consome a si mesmo.
+        assert(!b.inputs.some(i => i.id === b.output), `${id} consome a própria saída`);
+    }
+});
+
+check('ordem de processamento dos prédios está preservada', () => {
+    // Regressão: a ordem natural de declaração (madeira, depois pedra) colocaria
+    // `builder` depois de refinery/carpentry, deixando a Construtora consumir
+    // tábuas produzidas no mesmo tick. As tolerâncias dos testes de offline
+    // absorvem esse drift e não pegariam.
+    const { BUILDINGS } = makeGame();
+    const order = Object.keys(BUILDINGS);
+    assertEqual(order[0], 'woodcutter', 'gerador de madeira roda primeiro');
+    assert(order.indexOf('builder') < order.indexOf('refinery'),
+        'builder precisa rodar antes de refinery');
+    assert(order.indexOf('refinery') < order.indexOf('carpentry'),
+        'refinery antes de carpentry (tábua antes de móvel)');
+});
+
+check('grafo de produção é acíclico', () => {
+    // A árvore visual da Fase 4 depende disto; um ciclo travaria o jogo.
+    // O ciclo é entre PRÉDIOS: B depende de A se B consome um recurso que A
+    // produz. Duas Fundições que se alimentassem mutuamente travariam aqui.
+    const { BUILDINGS } = makeGame();
+
+    const producers = {};   // resource -> [buildingId]
+    for (const id in BUILDINGS) {
+        (producers[BUILDINGS[id].output] = producers[BUILDINGS[id].output] || []).push(id);
+    }
+
+    const visiting = new Set();
+    const done = new Set();
+
+    const walk = (id) => {
+        assert(!visiting.has(id), `ciclo de produção em ${id}`);
+        if (done.has(id)) return;
+        visiting.add(id);
+        for (const input of BUILDINGS[id].inputs) {
+            for (const p of producers[input.id] || []) walk(p);
+        }
+        visiting.delete(id);
+        done.add(id);
+    };
+
+    for (const id in BUILDINGS) walk(id);
+});
+
+check('getDefaultState() é derivado das tabelas de dados', () => {
+    const { game, RESOURCES, BUILDINGS } = makeGame();
+    const s = game.getDefaultState();
+    assert(JSON.stringify(Object.keys(s.inventory)) === JSON.stringify(Object.keys(RESOURCES)),
+        'inventory não bate com RESOURCES');
+    assert(JSON.stringify(Object.keys(s.autoSell)) === JSON.stringify(Object.keys(RESOURCES)),
+        'autoSell não bate com RESOURCES');
+    assert(JSON.stringify(Object.keys(s.buildings)) === JSON.stringify(Object.keys(BUILDINGS)),
+        'buildings não bate com BUILDINGS');
+});
+
+check('todo prédio tem custo e velocidade finitos', () => {
+    // baseTime/baseCost saíram do state e passaram a vir de BUILDINGS. Um único
+    // ponto de leitura esquecido daria NaN — que a UI exibiria como "NaNs / ciclo"
+    // e pararia a produção em silêncio, com todos os outros asserts passando.
+    const { game, BUILDINGS } = makeGame();
+    for (const id in BUILDINGS) {
+        for (const n of [0, 1, 3, 20]) {
+            game.state.buildings[id].count = n;
+            const c = game.getBuildingCost(id);
+            const s = game.getBuildingSpeed(id);
+            assert(Number.isFinite(c) && c > 0, `custo de ${id}@${n}: ${c}`);
+            assert(Number.isFinite(s) && s >= 0, `velocidade de ${id}@${n}: ${s}`);
+        }
+    }
+});
+
+check('sharpSaws acelera SÓ a refinaria, em exatamente 10%', () => {
+    // A generalização de `id === 'refinery'` para iterar def.speedUpgrades tem uma
+    // falha óbvia: `mult = u.mult` em vez de `*=`, ou não checar a lista do prédio.
+    // Qualquer uma buffa todo processador em 10% sem nenhum teste reclamar.
+    const { game } = makeGame();
+    game.state.buildings.refinery.count = 1;
+    game.state.buildings.carpentry.count = 1;
+
+    const refBefore = game.getBuildingSpeed('refinery');
+    const carpBefore = game.getBuildingSpeed('carpentry');
+    game.state.upgrades.sharpSaws = true;
+
+    assertEqual(game.getBuildingSpeed('refinery'), refBefore * 1.1, 'ganho da refinaria');
+    assertEqual(game.getBuildingSpeed('carpentry'), carpBefore, 'carpintaria não pode mudar');
+});
+
+check('save antigo não sombreia a configuração de custo', () => {
+    // Com {...default, ...save}, um save carregando baseCost: 999999 continuaria
+    // valendo para sempre, ignorando qualquer ajuste futuro na tabela.
+    const store = { [SAVE_KEY]: JSON.stringify({
+        money: 0,
+        buildings: { refinery: { count: 2, baseCost: 999999, baseTime: 999, autoCollectCost: 1 } }
+    }) };
+    const { game } = makeGame(null, store);
+    assertEqual(game.state.buildings.refinery.count, 2, 'campos mutáveis vem do save');
+    assertEqual(game.getBuildingCost('refinery'), 10 * Math.pow(1.15, 2), 'custo vem de BUILDINGS');
+    game.state.buildings.refinery.count = 1;
+    assertEqual(game.getBuildingSpeed('refinery'), 1 / 5, 'velocidade vem de BUILDINGS');
+});
+
+check('estado de prédio tem só os 4 campos mutáveis', () => {
+    const { game } = makeGame();
+    const b = game.state.buildings.woodcutter;
+    assert(JSON.stringify(Object.keys(b).sort()) ===
+        JSON.stringify(['autoCollect', 'count', 'progress', 'storedOutput']),
+        `campos inesperados: ${Object.keys(b)}`);
+    assertEqual(b.outputItem, undefined, 'outputItem migrou para BUILDINGS');
+    assertEqual(b.baseCost, undefined, 'baseCost migrou para BUILDINGS');
+});
+
+check('taxa por recurso soma os prédios que o produzem', () => {
+    const { game } = makeGame();
+    game.state.buildings.woodcutter.count = 1;  // 0.5/s
+    assertEqual(game.getResourceRate('wood'), 0.5, 'só o lenhador produz madeira');
+
+    game.state.buildings.refinery.count = 1;   // 0.2/s
+    assertEqual(game.getResourceRate('board'), 0.2, 'tábuas vêm da refinaria');
+    // A lenhadeira não produz tábuas, então a taxa de tábua não inclui madeira.
+    assertEqual(game.getResourceRate('wood'), 0.5, 'madeira não muda com a refinaria');
+});
+
+check('taxa por.resource ignora prédio bloqueado', () => {
+    const { game } = makeGame();
+    game.state.buildings.stoneMiner.count = 1;
+    assertEqual(game.isBuildingUnlocked('stoneMiner'), false, 'bloqueado sem stonePanel');
+    assertEqual(game.getResourceRate('stone'), 0, 'não conta prédio bloqueado');
+
+    game.state.unlocks.stonePanel = true;
+    assertEqual(game.getResourceRate('stone'), 1 / 3, 'conta depois do unlock');
+});
+
+check('sellAll() vende tudo, com e sem unlock de pedra', () => {
+    const { game, RESOURCES } = makeGame();
+    game.state.inventory = { wood: 2, board: 1, furniture: 1, stone: 3, stoneBlock: 1, constructionMat: 1 };
+
+    game.sellAll();
+
+    let esperado = 0;
+    for (const id in RESOURCES) esperado += game.state.inventory[id];
+    assert(esperado === 0, 'inventário deveria estar zerado');
+    // 2*1 + 1*5 + 1*25 + 3*10 + 1*50 + 1*500 = 612
+    assertEqual(game.state.money, 612, 'total vendido');
+});
+
+check('sellAll() sem stonePanel vende o que houver', () => {
+    // Regressão do gate antigo: com pedra no inventário e o painel bloqueado,
+    // os itens ficavam presos. Sem o unlock não dá para obter pedra, mas o save
+    // pode ter.
+    const { game } = makeGame();
+    assertEqual(game.state.unlocks.stonePanel, false, 'premissa: bloqueado');
+    game.state.inventory.stone = 4;
+    game.sellAll();
+    assertEqual(game.state.inventory.stone, 0, 'pedra não pode ficar presa');
+    assertEqual(game.state.money, 40, '4 pedras a R$ 10');
+});
+
+check('sell() usa o preço da tabela de dados', () => {
+    const { game, RESOURCES } = makeGame();
+    for (const id in RESOURCES) {
+        game.state.money = 0;
+        game.state.inventory[id] = 3;
+        game.sell(id);
+        assertEqual(game.state.money, 3 * RESOURCES[id].price, `preço de ${id}`);
     }
 });
 

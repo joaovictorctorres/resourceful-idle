@@ -488,8 +488,8 @@ class GameUI {
             ui.btnCollect.disabled = bData.storedOutput < 1;
             
             // Botão Upgrade Autocoleta dinâmico
-            ui.btnAuto.innerText = `⭐️ Autocoleta (R$ ${this.formatMoney(bData.autoCollectCost)})`;
-            ui.btnAuto.disabled = currentMoney < bData.autoCollectCost;
+            ui.btnAuto.innerText = `⭐️ Autocoleta (R$ ${this.formatMoney(BUILDINGS[id].autoCollectCost)})`;
+            ui.btnAuto.disabled = currentMoney < BUILDINGS[id].autoCollectCost;
         }
     }
 

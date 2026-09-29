@@ -1,6 +1,69 @@
 // Definições de conteúdo do jogo. Fonte única de verdade — o motor, a UI e a
 // árvore de pesquisa leem daqui em vez de repetir dados em markup.
 
+// Cadeias de recurso. `color` alimenta a custom property --chain, então um grupo
+// novo custa zero CSS. `requires` é o unlock que esconde o grupo inteiro.
+const GROUPS = {
+    wood:  { name: 'Madeira', color: '#d9a05b' },
+    stone: { name: 'Pedra',   color: '#8fa3b8', requires: 'stonePanel' },
+    metal: { name: 'Metal',   color: '#e8833a', requires: 'metalPanel' }  // fase metalurgia
+};
+
+// Ordem das chaves = ordem de exibição. `short` é o rótulo compacto da barra de
+// recursos, do painel de stats e do modal de offline.
+const RESOURCES = {
+    wood:            { name: 'Madeira Bruta',          short: 'Madeira',          icon: '🪵', price: 1,   group: 'wood' },
+    board:           { name: 'Tábua',                  short: 'Tábuas',           icon: '🪚', price: 5,   group: 'wood' },
+    furniture:       { name: 'Móvel',                  short: 'Móveis',           icon: '🪑', price: 25,  group: 'wood' },
+    stone:           { name: 'Pedra Bruta',            short: 'Pedra',            icon: '🪨', price: 10,  group: 'stone' },
+    stoneBlock:      { name: 'Bloco de Pedra',         short: 'Blocos de Pedra',  icon: '🧱', price: 50,  group: 'stone' },
+    constructionMat: { name: 'Material de Construção', short: 'Mat. Construção',  icon: '🏗️', price: 500, group: 'stone' }
+};
+
+// Ordem das chaves É a ordem de processamento em update() — NÃO reordenar sem
+// pensar: hoje `builder` roda antes de `refinery`/`carpentry`, e inverter isso
+// deixa a Construtora consumir tábuas produzidas no mesmo tick.
+// inputs: [] = gerador (não consome insumo).
+const BUILDINGS = {
+    woodcutter: {
+        name: 'Acampamento de Lenhadores', icon: '🪓', group: 'wood',
+        desc: 'Gera 1 Madeira automaticamente.',
+        baseCost: 150, baseTime: 2, autoCollectCost: 1500,
+        inputs: [], output: 'wood', trackStat: 'totalWoodChopped'
+    },
+    stoneMiner: {
+        name: 'Poço da Pedreira', icon: '⛏️', group: 'stone', requires: 'stonePanel',
+        desc: 'Gera 1 Pedra automaticamente.',
+        baseCost: 5000, baseTime: 3, autoCollectCost: 30000,
+        inputs: [], output: 'stone'
+    },
+    stoneKiln: {
+        name: 'Forno de Pedra', icon: '🔥', group: 'stone', requires: 'stonePanel',
+        desc: 'Converte 1 Pedra em 1 Bloco de Pedra.',
+        baseCost: 10000, baseTime: 8, autoCollectCost: 75000,
+        inputs: [{ id: 'stone', qty: 1 }], output: 'stoneBlock'
+    },
+    builder: {
+        name: 'Construtora Civil', icon: '🏗️', group: 'stone', requires: 'stonePanel',
+        desc: 'Consome 1 Tábua e 1 Bloco de Pedra = 1 Mat. de Construção.',
+        baseCost: 50000, baseTime: 15, autoCollectCost: 200000,
+        inputs: [{ id: 'board', qty: 1 }, { id: 'stoneBlock', qty: 1 }], output: 'constructionMat'
+    },
+    refinery: {
+        name: 'Refinaria de Madeira', icon: '🪚', group: 'wood',
+        desc: 'Converte 1 Madeira em 1 Tábua.',
+        baseCost: 10, baseTime: 5, autoCollectCost: 3000,
+        inputs: [{ id: 'wood', qty: 1 }], output: 'board',
+        speedUpgrades: [{ id: 'sharpSaws', mult: 1.1 }]
+    },
+    carpentry: {
+        name: 'Fábrica de Carpintaria', icon: '🪑', group: 'wood',
+        desc: 'Converte 1 Tábua em 1 Móvel.',
+        baseCost: 50, baseTime: 10, autoCollectCost: 10000,
+        inputs: [{ id: 'board', qty: 1 }], output: 'furniture'
+    }
+};
+
 // Multiplicador de produção concedido por cada conquista desbloqueada.
 const ACHIEVEMENT_BONUS = 0.02;
 
