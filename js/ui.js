@@ -38,14 +38,8 @@ class GameUI {
         this.btnUpgStoneUnlock = document.getElementById('btn-upg-stoneUnlock');
         this.btnUpgSaws = document.getElementById('btn-upg-saws');
         this.btnUpgSmartSell = document.getElementById('btn-upg-smartSell');
-        this.btnUpgChainsaw = document.getElementById('btn-upg-chainsaw');
-        this.lvlChainsaw = document.getElementById('lvl-chainsaw');
-        this.costChainsaw = document.getElementById('cost-chainsaw');
-        this.speedChainsaw = document.getElementById('speed-chainsaw');
-        this.btnUpgJackhammer = document.getElementById('btn-upg-jackhammer');
-        this.lvlJackhammer = document.getElementById('lvl-jackhammer');
-        this.costJackhammer = document.getElementById('cost-jackhammer');
-        this.speedJackhammer = document.getElementById('speed-jackhammer');
+        this.upgMetalUnlock = document.getElementById('upg-metalUnlock');
+        this.btnUpgMetalUnlock = document.getElementById('btn-upg-metalUnlock');
 
         // Mapas de referência, preenchidos no render. Resolvidos UMA vez — antes
         // eram 18 getElementById por frame dentro do updateUI.
@@ -60,6 +54,10 @@ class GameUI {
 
     // ------------------------------------------------------------- renderização
 
+    // Estrutura completa de uma vez: barra, ações e cards. Recursos de cadeia
+    // bloqueada são desenhados escondidos em vez de ausentes, para que o unlock
+    // (que acontece no meio da sessão) não exija re-render e não perca os
+    // listeners de clique.
     render() {
         this.renderResources();
         this.renderActions();
@@ -106,17 +104,17 @@ class GameUI {
     }
 
     renderActions() {
-        // Botões de coleta manual, derivados dos recursos com ação manual.
+        // Botões de coleta manual, derivados de RESOURCES[].manual. Um recurso
+        // novo com coleta manual ganha botão sem código novo.
         this.actionBar.innerHTML = Object.keys(RESOURCES)
-            .filter(id => id === 'wood' || id === 'stone')
+            .filter(id => RESOURCES[id].manual)
             .map(id => {
                 const r = RESOURCES[id];
-                const label = id === 'wood' ? 'Coletar Madeira' : 'Coletar Pedra';
                 return `
-                    <button class="btn btn-primary btn-large click-effect" data-manual="${id}"
+                    <button class="btn btn-primary click-effect" data-manual="${id}"
                         style="user-select:none; -webkit-user-select:none;">
                         <span class="icon">${r.icon}</span>
-                        <span>${label}</span>
+                        <span>${r.name}</span>
                     </button>
                 `;
             }).join('');
@@ -221,8 +219,14 @@ class GameUI {
         this.btnUpgStoneUnlock.addEventListener('click', () => { this.game.buyStoneUnlock(); this.updateUI(); });
         this.btnUpgSaws.addEventListener('click', () => { this.game.buyUpgrade('sharpSaws'); this.updateUI(); });
         this.btnUpgSmartSell.addEventListener('click', () => { this.game.buyUpgrade('smartSell'); this.updateUI(); });
-        this.btnUpgChainsaw.addEventListener('click', () => { this.game.buyUpgrade('chainsaw'); this.updateUI(); });
-        this.btnUpgJackhammer.addEventListener('click', () => { this.game.buyUpgrade('jackhammer'); this.updateUI(); });
+        this.btnUpgMetalUnlock.addEventListener('click', () => { this.game.buyMetalUnlock(); this.updateUI(); });
+
+        // Os upgrades de clique contínuo seguem um padrão id <key>Level, então
+        // um listener por card, sem delegação.
+        for (const key of ['chainsaw', 'jackhammer', 'pickaxe']) {
+            document.getElementById(`btn-upg-${key}Level`)
+                .addEventListener('click', () => { this.game.buyUpgrade(`${key}Level`); this.updateUI(); });
+        }
 
         // Um listener delegado cobre abas, venda, autocoleta e compra. Fica em
         // document (não no container) porque um container re-renderizado por
@@ -260,10 +264,7 @@ class GameUI {
                 btn.style.transform = 'scale(0.95)';
             };
             const up = () => {
-                if (this.game.holdingAction === id) {
-                    if (id === 'wood') this.game.chopWood();
-                    if (id === 'stone') this.game.mineStone();
-                }
+                if (this.game.holdingAction === id) this.game.gather(id);
                 this.game.setHoldingAction(null);
                 btn.style.transform = '';
                 this.updateUI();
@@ -335,6 +336,13 @@ class GameUI {
         const s = this.game.state;
         for (const id in this.res) {
             const ui = this.res[id];
+
+            // Tudo é desenhado no boot; o unlock só revela.
+            const visible = this.game.isResourceUnlocked(id);
+            ui.root.classList.toggle('hidden', !visible);
+            if (this.acts[id]) this.acts[id].classList.toggle('hidden', !visible);
+            if (!visible) continue;
+
             ui.count.innerText = this.formatCount(s.inventory[id]);
             ui.sell.disabled = s.inventory[id] === 0;
 
@@ -413,9 +421,14 @@ class GameUI {
     updateUpgrades() {
         const s = this.game.state;
 
-        // Explorar Pedreira: some depois de destravada.
+        // Explorar Pedreira e Fundir Metais somem depois de destravados.
         this.upgStoneUnlock.classList.toggle('hidden', s.unlocks.stonePanel);
         this.btnUpgStoneUnlock.disabled = s.money < 3000 || s.inventory.furniture < 100;
+
+        const showMetal = s.unlocks.stonePanel && !s.unlocks.metalPanel;
+        this.upgMetalUnlock.classList.toggle('hidden', !showMetal);
+        this.btnUpgMetalUnlock.disabled =
+            s.money < METAL_UNLOCK_COST || s.inventory.constructionMat < METAL_UNLOCK_MATS;
 
         if (s.upgrades.sharpSaws) {
             this.btnUpgSaws.innerText = 'Comprado';
@@ -431,30 +444,28 @@ class GameUI {
             this.btnUpgSmartSell.disabled = s.money < 2000;
         }
 
-        this.btnUpgChainsaw.parentElement.parentElement.classList.toggle('hidden', !s.unlocks.continuousClick);
-        if (s.unlocks.continuousClick) {
-            this.lvlChainsaw.innerText = s.upgrades.chainsawLevel;
-            if (this.speedChainsaw) {
-                this.speedChainsaw.innerText = s.upgrades.chainsawLevel > 0
-                    ? `(${s.upgrades.chainsawLevel}/seg)` : '';
-            }
-            const chainCost = this.game.getContinuousClickCost('chainsaw');
-            this.costChainsaw.innerText = this.formatMoney(chainCost);
-            this.btnUpgChainsaw.disabled = s.money < chainCost;
-        }
+        // Upgrades de clique contínuo: três cards com a mesma forma.
+        this.updateHoldUpgrade('chainsaw', s, !s.unlocks.continuousClick);
+        this.updateHoldUpgrade('jackhammer', s, !(s.unlocks.continuousClick && s.unlocks.stonePanel));
+        this.updateHoldUpgrade('pickaxe', s, !(s.unlocks.continuousClick && s.unlocks.metalPanel));
+    }
 
-        const showJack = s.unlocks.continuousClick && s.unlocks.stonePanel;
-        this.btnUpgJackhammer.parentElement.parentElement.classList.toggle('hidden', !showJack);
-        if (showJack) {
-            this.lvlJackhammer.innerText = s.upgrades.jackhammerLevel;
-            if (this.speedJackhammer) {
-                this.speedJackhammer.innerText = s.upgrades.jackhammerLevel > 0
-                    ? `(${s.upgrades.jackhammerLevel}/seg)` : '';
-            }
-            const jackCost = this.game.getContinuousClickCost('jackhammer');
-            this.costJackhammer.innerText = this.formatMoney(jackCost);
-            this.btnUpgJackhammer.disabled = s.money < jackCost;
-        }
+    updateHoldUpgrade(key, s, hidden) {
+        const card = document.getElementById(`upg-${key}`);
+        const btn = document.getElementById(`btn-upg-${key}Level`);
+        const lvl = document.getElementById(`lvl-${key}`);
+        const cost = document.getElementById(`cost-${key}`);
+        const speed = document.getElementById(`speed-${key}`);
+
+        card.classList.toggle('hidden', hidden);
+        if (hidden) return;
+
+        const level = s.upgrades[`${key}Level`];
+        lvl.innerText = level;
+        speed.innerText = level > 0 ? `(${level}/seg)` : '';
+        const c = this.game.getContinuousClickCost(`${key}Level`);
+        cost.innerText = this.formatMoney(c);
+        btn.disabled = s.money < c;
     }
 
     // ------------------------------------------------------------------ formatação
@@ -566,6 +577,7 @@ class GameUI {
             const collected = Math.floor(s.stats.totalCollected[id] || 0);
             const earned = s.stats.totalEarned[id] || 0;
             if (collected === 0) return '';
+            if (!this.game.isResourceUnlocked(id)) return '';
 
             return `
                 <div class="stat-card" style="--chain: ${GROUPS[r.group].color}">

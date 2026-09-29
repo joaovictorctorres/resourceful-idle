@@ -65,7 +65,8 @@ function makeGame(savedState, store) {
         '\nglobalThis.IdleGame = IdleGame; globalThis.ACHIEVEMENTS = ACHIEVEMENTS;' +
         ' globalThis.ACHIEVEMENT_BONUS = ACHIEVEMENT_BONUS;' +
         ' globalThis.RESOURCES = RESOURCES; globalThis.BUILDINGS = BUILDINGS;' +
-        ' globalThis.GROUPS = GROUPS;',
+        ' globalThis.GROUPS = GROUPS; globalThis.METAL_UNLOCK_COST = METAL_UNLOCK_COST;' +
+        ' globalThis.METAL_UNLOCK_MATS = METAL_UNLOCK_MATS;',
         sandbox
     );
 
@@ -74,7 +75,8 @@ function makeGame(savedState, store) {
     return {
         game, store, sandbox,
         ACHIEVEMENTS: sandbox.ACHIEVEMENTS, ACHIEVEMENT_BONUS: sandbox.ACHIEVEMENT_BONUS,
-        RESOURCES: sandbox.RESOURCES, BUILDINGS: sandbox.BUILDINGS, GROUPS: sandbox.GROUPS
+        RESOURCES: sandbox.RESOURCES, BUILDINGS: sandbox.BUILDINGS, GROUPS: sandbox.GROUPS,
+        METAL_UNLOCK_COST: sandbox.METAL_UNLOCK_COST, METAL_UNLOCK_MATS: sandbox.METAL_UNLOCK_MATS
     };
 }
 
@@ -640,15 +642,19 @@ check('taxa por.resource ignora prédio bloqueado', () => {
 
 check('sellAll() vende tudo, com e sem unlock de pedra', () => {
     const { game, RESOURCES } = makeGame();
-    game.state.inventory = { wood: 2, board: 1, furniture: 1, stone: 3, stoneBlock: 1, constructionMat: 1 };
+    // Derivado da tabela, não fixo: a lista cresce a cada fase.
+    for (const id in RESOURCES) game.state.inventory[id] = 1;
 
     game.sellAll();
 
+    let restante = 0;
     let esperado = 0;
-    for (const id in RESOURCES) esperado += game.state.inventory[id];
-    assert(esperado === 0, 'inventário deveria estar zerado');
-    // 2*1 + 1*5 + 1*25 + 3*10 + 1*50 + 1*500 = 612
-    assertEqual(game.state.money, 612, 'total vendido');
+    for (const id in RESOURCES) {
+        restante += game.state.inventory[id];
+        esperado += RESOURCES[id].price;
+    }
+    assertEqual(restante, 0, 'inventário deveria estar zerado');
+    assertEqual(game.state.money, esperado, 'total vendido');
 });
 
 check('sellAll() sem stonePanel vende o que houver', () => {
@@ -671,6 +677,140 @@ check('sell() usa o preço da tabela de dados', () => {
         game.sell(id);
         assertEqual(game.state.money, 3 * RESOURCES[id].price, `preço de ${id}`);
     }
+});
+
+// -------------------------------------------------------------- metalurgia
+
+check('cadeia do aço: minério -> lingote -> aço com carvão', () => {
+    const { game, BUILDINGS } = makeGame();
+    game.state.unlocks.metalPanel = true;
+
+    assertEqual(BUILDINGS.ironMine.output, 'ironOre', 'mina de ferro gera minério');
+    assertEqual(BUILDINGS.ironSmelter.inputs[0].id, 'ironOre', 'fundição consome minério');
+    assertEqual(BUILDINGS.ironSmelter.output, 'ironIngot', 'fundição produz lingote');
+    assertEqual(BUILDINGS.steelMill.output, 'steel', 'siderúrgica produz aço');
+
+    const ins = BUILDINGS.steelMill.inputs.map(i => i.id).sort();
+    assertEqual(ins.join('+'), 'coal+ironIngot', 'aço = lingote de ferro + carvão');
+});
+
+check('cadeia do bronze: liga de cobre + estanho', () => {
+    const { game, BUILDINGS } = makeGame();
+    // Bronze é liga de cobre+estanho, não um passo depois do ferro.
+    const ins = BUILDINGS.bronzeWorks.inputs.map(i => i.id).sort();
+    assertEqual(ins.join('+'), 'copperIngot+tinIngot', 'bronze = cobre + estanho');
+    assertEqual(BUILDINGS.bronzeWorks.output, 'bronze', 'produz bronze');
+});
+
+check('carvão é insumo do aço, não recurso vendável por acidente', () => {
+    const { game, BUILDINGS, RESOURCES } = makeGame();
+    assert(BUILDINGS.steelMill.inputs.some(i => i.id === 'coal'), 'carvão alimenta a usina');
+    assert(RESOURCES.coal, 'carvão existe como recurso');
+    // Nenhum prédio consome carvão para fora do aço, senão ele seria um beco.
+    const consumidores = Object.keys(BUILDINGS).filter(id =>
+        BUILDINGS[id].inputs.some(i => i.id === 'coal'));
+    assertEqual(consumidores.join(','), 'steelMill', 'carvão não pode ser beco sem saída');
+});
+
+check('metalurgia fica atrás do unlock', () => {
+    const { game, BUILDINGS, RESOURCES, METAL_UNLOCK_COST, METAL_UNLOCK_MATS } = makeGame();
+
+    // Antes do unlock, nada metalúrgico é visível nem produz.
+    assertEqual(game.isResourceUnlocked('ironOre'), false, 'minério bloqueado');
+    assertEqual(game.isBuildingUnlocked('steelMill'), false, 'siderúrgica bloqueada');
+    for (const id of Object.keys(BUILDINGS)) {
+        if (BUILDINGS[id].group === 'metal') {
+            game.state.buildings[id].count = 5;
+        }
+    }
+    game.state.lastSaveTimestamp = Date.now() - 8 * 3600 * 1000;
+    game.applyOfflineProgress();
+    for (const id of ['ironIngot', 'steel', 'bronze', 'coal']) {
+        assertEqual(game.state.inventory[id], 0, `${id} não pode produzir sem unlock`);
+    }
+
+    // buyMetalUnlock exige dinheiro E material, não só um dos dois.
+    game.state.money = METAL_UNLOCK_COST;
+    game.state.inventory.constructionMat = 0;
+    game.buyMetalUnlock();
+    assertEqual(game.state.unlocks.metalPanel, false, 'faltava material');
+
+    game.state.inventory.constructionMat = METAL_UNLOCK_MATS;
+    game.buyMetalUnlock();
+    assertEqual(game.state.unlocks.metalPanel, true, 'deveria ter destravado');
+    assertEqual(game.state.money, 0, 'cobrança em dinheiro');
+    assertEqual(game.state.inventory.constructionMat, 0, 'cobrança em material');
+});
+
+check('gather() coleta qualquer minério com coleta manual', () => {
+    const { game, RESOURCES } = makeGame();
+    // Cada recurso manual tem seu próprio unlock; sem abrir todos, gather()
+    // recusa — e esse é o comportamento correto.
+    game.state.unlocks.metalPanel = true;
+    game.state.unlocks.stonePanel = true;
+
+    for (const id in RESOURCES) {
+        if (!RESOURCES[id].manual) continue;
+        game.state.inventory[id] = 0;
+        game.gather(id);
+        assertEqual(game.state.inventory[id], 1, `gather(${id})`);
+    }
+});
+
+check('gather() recusa recurso bloqueado', () => {
+    const { game } = makeGame();
+    game.gather('ironOre');
+    assertEqual(game.state.inventory.ironOre, 0, 'minério sem metalPanel');
+});
+
+check('gather() recusa recurso sem coleta manual', () => {
+    const { game } = makeGame();
+    game.gather('board');
+    assertEqual(game.state.inventory.board, 0, 'tábua não se coleta na mão');
+});
+
+check('perfuratriz serve os três minérios', () => {
+    const { game, RESOURCES } = makeGame();
+    game.state.unlocks.metalPanel = true;
+    game.state.unlocks.continuousClick = true;
+
+    for (const id of ['ironOre', 'copperOre', 'tinOre']) {
+        assertEqual(RESOURCES[id].holdUpgrade, 'pickaxeLevel', `${id} usa a perfuratriz`);
+    }
+    // Segurar o botão tem que produzir de fato, não só ter o campo preenchido.
+    game.state.upgrades.pickaxeLevel = 4;
+    game.setHoldingAction('ironOre');
+    game.update(1);
+    game.setHoldingAction(null);
+    assert(game.state.inventory.ironOre >= 3,
+        `perfuratriz não coleta: ${game.state.inventory.ironOre}`);
+});
+
+check('perfuratriz custa mais que motosserra', () => {
+    const { game } = makeGame();
+    assertEqual(game.state.upgrades.pickaxeLevel, 0, 'default inclui o nível novo');
+    assert(game.getContinuousClickCost('pickaxeLevel') > game.getContinuousClickCost('chainsawLevel'),
+        'tier final deve custar mais');
+});
+
+check('cadeias metalúrgicas convergem no mesmo tick', () => {
+    // Fundição e usina estão depois do minério na ordem de BUILDINGS, então uma
+    // passada de update deve encadear minério -> lingote -> aço.
+    const { game } = makeGame();
+    game.state.unlocks.metalPanel = true;
+    game.state.buildings.ironMine.count = 1;
+    game.state.buildings.ironMine.autoCollect = true;
+    game.state.buildings.ironSmelter.count = 1;
+    game.state.buildings.ironSmelter.autoCollect = true;
+    game.state.buildings.coalMine.count = 1;
+    game.state.buildings.coalMine.autoCollect = true;
+    game.state.buildings.steelMill.count = 1;
+    game.state.buildings.steelMill.autoCollect = true;
+
+    game.update(30);
+
+    assert(game.state.inventory.ironIngot > 0, 'deveria produzir lingote');
+    assert(game.state.inventory.steel > 0, 'deveria produzir aço');
 });
 
 // ------------------------------------------------------------------- relatório

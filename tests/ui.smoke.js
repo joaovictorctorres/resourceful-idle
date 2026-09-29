@@ -47,14 +47,26 @@ const URL = 'http://localhost:8899/index.html';
         if (!cond) fails.push(`${name}${detail ? ' — ' + detail : ''}`);
     };
 
-    // 1. Estrutura montada
-    ok('barra de recursos renderizada',
-        (await page.$$('.res-chip')).length === 6, `${(await page.$$('.res-chip')).length} chips`);
-    ok('6 cards de prédio', (await page.$$('.building-card')).length === 6);
+    // 1. Estrutura montada. Só a cadeia da madeira está visível no início:
+    // pedra e metalurgia são `requires`-gated (comportamento do jogo original).
+    const visibleChips = await page.$$eval('.res-chip',
+        els => els.filter(e => getComputedStyle(e).display !== 'none').length);
+    ok('barra mostra os 3 recursos da madeira', visibleChips === 3, `${visibleChips} chips`);
+
+    const visibleCards = await page.$$eval('.building-card',
+        els => els.filter(e => getComputedStyle(e).display !== 'none').length);
+    ok('3 cards visíveis (madeira)', visibleCards === 3, `${visibleCards} cards`);
+
+    ok('15 chips desenhados, ocultos por unlock',
+        (await page.$$('.res-chip')).length === 15, `${(await page.$$('.res-chip')).length}`);
+    ok('15 cards desenhados, ocultos por unlock',
+        (await page.$$('.building-card')).length === 15, `${(await page.$$('.building-card')).length}`);
     ok('3 abas', (await page.$$('[data-tab]')).length === 3);
     ok('Vender Tudo na barra', (await page.$('.res-sell-all')) !== null);
     ok('aba de Melhorias escondida no início',
         await page.$eval('[data-tab="melhorias"]', el => el.classList.contains('hidden')));
+    ok('1 botão de coleta manual visível (madeira)', await page.$$eval('[data-manual]',
+        els => els.filter(e => getComputedStyle(e).display !== 'none').length) === 1);
 
     // 2. Cadeia: o lenhador aparece, os de pedra não
     ok('card do lenhador visível',
@@ -137,10 +149,76 @@ const URL = 'http://localhost:8899/index.html';
         `${(await page.$$('.achievement-card')).length} cards`);
     await page.click('#btn-close-achievements');
 
-    // 11. Sem overflow horizontal (o bug do 100vw)
+    // 11. Metalurgia: destrava, expande barra/cards/botões e produz na cadeia
+    await page.evaluate(() => {
+        const g = window.gameRef;
+        g.state.money = 1e7;
+        g.state.inventory.constructionMat = 100;
+        g.state.unlocks.stonePanel = true;
+    });
+    await page.evaluate(() => document.querySelector('[data-tab="melhorias"]').click());
+    await new Promise(r => setTimeout(r, 120));
+    await page.click('#btn-upg-metalUnlock');
+    await new Promise(r => setTimeout(r, 200));
+
+    ok('metalPanel destravado', await page.evaluate(() => window.gameRef.state.unlocks.metalPanel));
+    ok('barra agora tem 15 recursos',
+        (await page.$$('.res-chip')).length === 15, `${(await page.$$('.res-chip')).length} chips`);
+    ok('5 botões de coleta manual (madeira, pedra, 3 minérios)',
+        (await page.$$('[data-manual]')).length === 5, `${(await page.$$('[data-manual]')).length}`);
+
+    // Volta para Produção: aba oculta não re-renderiza por design, então os
+    // cards de metal só aparecem ao exibir o painel.
+    await page.evaluate(() => document.querySelector('[data-tab="producao"]').click());
+    await new Promise(r => setTimeout(r, 200));
+
+    ok('15 cards visíveis após unlock', await page.$$eval('.building-card',
+        els => els.filter(e => getComputedStyle(e).display !== 'none').length) === 15);
+    ok('15 chips visíveis após unlock', await page.$$eval('.res-chip',
+        els => els.filter(e => getComputedStyle(e).display !== 'none').length) === 15);
+    ok('cadeia Metal aparece', (await page.$$('[data-chain="metal"]')).length === 1);
+
+    // Cadeia do aço convergir. Many unidades para que a taxaObserved não
+    // dependa do jitter do rAF do headless.
+    await page.evaluate(() => {
+        const g = window.gameRef;
+        for (const id of ['ironMine', 'ironSmelter', 'coalMine', 'steelMill']) {
+            g.state.buildings[id].count = 20;
+            g.state.buildings[id].autoCollect = true;
+        }
+    });
+    await new Promise(r => setTimeout(r, 2500));
+    const metalOk = await page.evaluate(() => {
+        const inv = window.gameRef.state.inventory;
+        return { iron: inv.ironIngot, steel: inv.steel, coal: inv.coal };
+    });
+    ok('cadeia ferro -> aço produz', metalOk.steel > 0,
+        `lingote=${metalOk.iron} aço=${metalOk.steel}`);
+    ok('carvão é consumido pela usina', metalOk.steel > 0, `carvão=${metalOk.coal}`);
+
+    // Perfuratriz aparece e coleta minério
+    ok('card da perfuratriz visível',
+        await page.$eval('#upg-pickaxe', el => !el.classList.contains('hidden')));
+
+    const oreBefore = await page.evaluate(() => window.gameRef.state.inventory.ironOre);
+    await page.click('[data-manual="ironOre"]');
+    await new Promise(r => setTimeout(r, 150));
+    const oreAfter = await page.evaluate(() => window.gameRef.state.inventory.ironOre);
+    ok('botão de minério de ferro coleta', oreAfter > oreBefore, `${oreBefore} -> ${oreAfter}`);
+
+    // 12. Sem overflow horizontal com 15 chips (o bug do 100vw)
+    await page.click('[data-tab="producao"]');
+    await new Promise(r => setTimeout(r, 200));
     const overflow = await page.evaluate(() =>
         document.documentElement.scrollWidth - document.documentElement.clientWidth);
     ok('sem overflow horizontal', overflow <= 0, `${overflow}px`);
+
+    // 13. Sem overflow no mobile com a barra cheia
+    await page.setViewport({ width: 390, height: 844 });
+    await new Promise(r => setTimeout(r, 300));
+    const overflowMobile = await page.evaluate(() =>
+        document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    ok('sem overflow horizontal no mobile', overflowMobile <= 0, `${overflowMobile}px`);
 
     await browser.close();
 

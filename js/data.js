@@ -11,13 +11,28 @@ const GROUPS = {
 
 // Ordem das chaves = ordem de exibição. `short` é o rótulo compacto da barra de
 // recursos, do painel de stats e do modal de offline.
+// `manual: true` ganha botão de coleta manual. `requires` esconde o recurso
+// (e sua cadeia) até o unlock.
 const RESOURCES = {
-    wood:            { name: 'Madeira Bruta',          short: 'Madeira',          icon: '🪵', price: 1,   group: 'wood' },
-    board:           { name: 'Tábua',                  short: 'Tábuas',           icon: '🪚', price: 5,   group: 'wood' },
-    furniture:       { name: 'Móvel',                  short: 'Móveis',           icon: '🪑', price: 25,  group: 'wood' },
-    stone:           { name: 'Pedra Bruta',            short: 'Pedra',            icon: '🪨', price: 10,  group: 'stone' },
-    stoneBlock:      { name: 'Bloco de Pedra',         short: 'Blocos de Pedra',  icon: '🧱', price: 50,  group: 'stone' },
-    constructionMat: { name: 'Material de Construção', short: 'Mat. Construção',  icon: '🏗️', price: 500, group: 'stone' }
+    wood:            { name: 'Madeira Bruta',          short: 'Madeira',          icon: '🪵', price: 1,    group: 'wood',  manual: true, trackStat: 'totalWoodChopped', holdUpgrade: 'chainsawLevel' },
+    board:           { name: 'Tábua',                  short: 'Tábuas',           icon: '🪚', price: 5,    group: 'wood' },
+    furniture:       { name: 'Móvel',                  short: 'Móveis',           icon: '🪑', price: 25,   group: 'wood' },
+    stone:           { name: 'Pedra Bruta',            short: 'Pedra',            icon: '🪨', price: 10,   group: 'stone', manual: true, requires: 'stonePanel', holdUpgrade: 'jackhammerLevel' },
+    stoneBlock:      { name: 'Bloco de Pedra',         short: 'Blocos de Pedra',  icon: '🧱', price: 50,   group: 'stone' },
+    constructionMat: { name: 'Material de Construção', short: 'Mat. Construção',  icon: '🏗️', price: 500,  group: 'stone' },
+
+    // --- Metalurgia ---
+    // Os três minérios compartilham o upgrade de perfuratriz: é o mesmo gesto
+    // físico, então não faz sentido exigir três melhorias distintas.
+    ironOre:         { name: 'Minério de Ferro',       short: 'Min. Ferro',       icon: '⛏️', price: 40,   group: 'metal', manual: true, requires: 'metalPanel', holdUpgrade: 'pickaxeLevel' },
+    copperOre:       { name: 'Minério de Cobre',       short: 'Min. Cobre',       icon: '🟠', price: 35,   group: 'metal', manual: true, requires: 'metalPanel', holdUpgrade: 'pickaxeLevel' },
+    tinOre:          { name: 'Minério de Estanho',     short: 'Min. Estanho',     icon: '⚪', price: 30,   group: 'metal', manual: true, requires: 'metalPanel', holdUpgrade: 'pickaxeLevel' },
+    coal:            { name: 'Carvão',                 short: 'Carvão',           icon: '⬛', price: 25,   group: 'metal', requires: 'metalPanel' },
+    ironIngot:       { name: 'Lingote de Ferro',       short: 'Ling. Ferro',      icon: '🔩', price: 300,  group: 'metal', requires: 'metalPanel' },
+    copperIngot:     { name: 'Lingote de Cobre',       short: 'Ling. Cobre',      icon: '🟫', price: 260,  group: 'metal', requires: 'metalPanel' },
+    tinIngot:        { name: 'Lingote de Estanho',     short: 'Ling. Estanho',    icon: '⬜', price: 220,  group: 'metal', requires: 'metalPanel' },
+    steel:           { name: 'Aço',                    short: 'Aço',              icon: '🥈', price: 2500, group: 'metal', requires: 'metalPanel' },
+    bronze:          { name: 'Bronze',                 short: 'Bronze',           icon: '🥉', price: 1800, group: 'metal', requires: 'metalPanel' }
 };
 
 // Ordem das chaves É a ordem de processamento em update() — NÃO reordenar sem
@@ -61,6 +76,64 @@ const BUILDINGS = {
         desc: 'Converte 1 Tábua em 1 Móvel.',
         baseCost: 50, baseTime: 10, autoCollectCost: 10000,
         inputs: [{ id: 'board', qty: 1 }], output: 'furniture'
+    },
+
+    // --- Metalurgia ---
+    // Mesma ordem: geradores e fundições (produtores) antes das usinas
+    // (consumidoras), para que o consumo veja a produção do mesmo tick.
+    coalMine: {
+        name: 'Poço de Carvão', icon: '⬛', group: 'metal', requires: 'metalPanel',
+        desc: 'Gera 1 Carvão automaticamente.',
+        baseCost: 8000, baseTime: 4, autoCollectCost: 60000,
+        inputs: [], output: 'coal'
+    },
+    ironMine: {
+        name: 'Mina de Ferro', icon: '⛏️', group: 'metal', requires: 'metalPanel',
+        desc: 'Gera 1 Minério de Ferro automaticamente.',
+        baseCost: 12000, baseTime: 4, autoCollectCost: 90000,
+        inputs: [], output: 'ironOre'
+    },
+    copperMine: {
+        name: 'Mina de Cobre', icon: '🟠', group: 'metal', requires: 'metalPanel',
+        desc: 'Gera 1 Minério de Cobre automaticamente.',
+        baseCost: 10000, baseTime: 4, autoCollectCost: 80000,
+        inputs: [], output: 'copperOre'
+    },
+    tinMine: {
+        name: 'Mina de Estanho', icon: '⚪', group: 'metal', requires: 'metalPanel',
+        desc: 'Gera 1 Minério de Estanho automaticamente.',
+        baseCost: 9000, baseTime: 5, autoCollectCost: 75000,
+        inputs: [], output: 'tinOre'
+    },
+    ironSmelter: {
+        name: 'Fundição de Ferro', icon: '🔥', group: 'metal', requires: 'metalPanel',
+        desc: 'Converte 1 Minério de Ferro em 1 Lingote de Ferro.',
+        baseCost: 25000, baseTime: 6, autoCollectCost: 150000,
+        inputs: [{ id: 'ironOre', qty: 1 }], output: 'ironIngot'
+    },
+    copperSmelter: {
+        name: 'Fundição de Cobre', icon: '🟠', group: 'metal', requires: 'metalPanel',
+        desc: 'Converte 1 Minério de Cobre em 1 Lingote de Cobre.',
+        baseCost: 20000, baseTime: 6, autoCollectCost: 130000,
+        inputs: [{ id: 'copperOre', qty: 1 }], output: 'copperIngot'
+    },
+    tinSmelter: {
+        name: 'Fundição de Estanho', icon: '⚪', group: 'metal', requires: 'metalPanel',
+        desc: 'Converte 1 Minério de Estanho em 1 Lingote de Estanho.',
+        baseCost: 18000, baseTime: 6, autoCollectCost: 120000,
+        inputs: [{ id: 'tinOre', qty: 1 }], output: 'tinIngot'
+    },
+    steelMill: {
+        name: 'Siderúrgica', icon: '⚫', group: 'metal', requires: 'metalPanel',
+        desc: 'Consome 1 Lingote de Ferro e 1 Carvão = 1 Aço.',
+        baseCost: 200000, baseTime: 20, autoCollectCost: 900000,
+        inputs: [{ id: 'ironIngot', qty: 1 }, { id: 'coal', qty: 1 }], output: 'steel'
+    },
+    bronzeWorks: {
+        name: 'Liga de Bronze', icon: '🥉', group: 'metal', requires: 'metalPanel',
+        desc: 'Consome 1 Lingote de Cobre e 1 de Estanho = 1 Bronze.',
+        baseCost: 150000, baseTime: 18, autoCollectCost: 700000,
+        inputs: [{ id: 'copperIngot', qty: 1 }, { id: 'tinIngot', qty: 1 }], output: 'bronze'
     }
 };
 

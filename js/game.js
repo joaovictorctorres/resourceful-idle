@@ -2,6 +2,10 @@
 const OFFLINE_CAP_SECONDS = 8 * 60 * 60;
 const OFFLINE_MAX_CHUNKS = 240;
 
+// Unlock da metalurgia. O tier final fica atrás da cadeia de construção.
+const METAL_UNLOCK_COST = 150000;
+const METAL_UNLOCK_MATS = 100;
+
 // Estado de um prédio: só os 4 campos mutáveis. Config estática (custo, tempo,
 // insumo, saída) vem de BUILDINGS — ver load() para por quê.
 function freshBuilding() {
@@ -50,12 +54,14 @@ class IdleGame {
             upgrades: {
                 sharpSaws: false,
                 chainsawLevel: 0,
-                jackhammerLevel: 0
+                jackhammerLevel: 0,
+                pickaxeLevel: 0
             },
             unlocks: {
                 upgradesPanel: false,
                 continuousClick: false,
                 stonePanel: false,
+                metalPanel: false,
                 smartSell: false
             },
             achievements: {},
@@ -95,8 +101,23 @@ getResourceRate(id) {
 }
 
 isBuildingUnlocked(id) {
-    const req = BUILDINGS[id].requires;
-    return !req || !!this.state.unlocks[req];
+    const def = BUILDINGS[id];
+    if (!def) return false;
+    if (def.requires && !this.state.unlocks[def.requires]) return false;
+    const groupReq = GROUPS[def.group]?.requires;
+    return !groupReq || !!this.state.unlocks[groupReq];
+}
+
+// Um recurso está liberado quando o próprio `requires` (se houver) e o do seu
+// grupo estão abertos. Sem o fallback do grupo, `stoneBlock` e
+// `constructionMat` — que não trazem requires próprio — apareceriam antes do
+// unlock da pedreira.
+isResourceUnlocked(id) {
+    const def = RESOURCES[id];
+    if (!def) return false;
+    if (def.requires && !this.state.unlocks[def.requires]) return false;
+    const groupReq = GROUPS[def.group]?.requires;
+    return !groupReq || !!this.state.unlocks[groupReq];
 }
 
 // Bônus acumulado das conquistas. Conta os ids desbloqueados em vez de manter um
@@ -124,18 +145,22 @@ setHoldingAction(actionName) {
     }
 }
 
-chopWood() {
-    this.state.inventory.wood++;
-    this.state.stats.totalWoodChopped++;
-    this.state.stats.manualClicks++;
-    this.state.stats.totalCollected['wood'] = (this.state.stats.totalCollected['wood'] || 0) + 1;
-    this.checkUnlocks();
-}
+// Coleta manual de um recurso qualquer. Cobre madeira, pedra e os minérios da
+// metalurgia — o botão é gerado a partir de RESOURCES[].manual, então um
+// recurso novo com coleta manual não precisa de método novo.
+gather(id) {
+    const def = RESOURCES[id];
+    if (!def || !def.manual) return;
+    if (def.requires && !this.state.unlocks[def.requires]) return;
 
-mineStone() {
-    if (!this.state.unlocks.stonePanel) return;
-    this.state.inventory.stone++;
-    this.state.stats.totalCollected['stone'] = (this.state.stats.totalCollected['stone'] || 0) + 1;
+    this.state.inventory[id]++;
+    this.state.stats.manualClicks++;
+    this.state.stats.totalCollected[id] = (this.state.stats.totalCollected[id] || 0) + 1;
+
+    // A madeira tem um stat próprio que destrava o painel de upgrades. A escrita
+    // aqui em vez de hardcoded é o que mantém a Fase 3 genérica.
+    if (def.trackStat) this.state.stats[def.trackStat]++;
+    this.checkUnlocks();
 }
 
 sell(item) {
@@ -156,8 +181,8 @@ sell(item) {
 }
 
 // Sem gate de unlock: seguir o precedente do auto-sell (que nunca gateou). Sem o
-// unlock o jogador não tem como obter esses recursos — mineStone() retorna cedo e
-// os prédios de pedra são `requires`-gated.
+// unlock o jogador não tem como obter esses recursos — gather() exige o unlock e
+// os prédios são `requires`-gated.
 sellAll() {
     for (const id in RESOURCES) this.sell(id);
 }
@@ -177,18 +202,24 @@ buyUpgrade(id) {
             this.state.money -= cost;
             this.state.upgrades.sharpSaws = true;
         }
-    } else if (id === 'chainsaw') {
-        const cost = this.getContinuousClickCost('chainsaw');
+    } else if (id === 'chainsawLevel') {
+        const cost = this.getContinuousClickCost('chainsawLevel');
         if (this.state.money >= cost && this.state.unlocks.continuousClick) {
             this.state.money -= cost;
             this.state.upgrades.chainsawLevel++;
         }
-    } else if (id === 'jackhammer') {
-        const cost = this.getContinuousClickCost('jackhammer');
+    } else if (id === 'jackhammerLevel') {
+        const cost = this.getContinuousClickCost('jackhammerLevel');
         // Só permite comprar se tiver destravado a pedra também (stonePanel)
         if (this.state.money >= cost && this.state.unlocks.continuousClick && this.state.unlocks.stonePanel) {
             this.state.money -= cost;
             this.state.upgrades.jackhammerLevel++;
+        }
+    } else if (id === 'pickaxeLevel') {
+        const cost = this.getContinuousClickCost('pickaxeLevel');
+        if (this.state.money >= cost && this.state.unlocks.continuousClick && this.state.unlocks.metalPanel) {
+            this.state.money -= cost;
+            this.state.upgrades.pickaxeLevel++;
         }
     } else if (id === 'smartSell') {
         const cost = 2000;
@@ -205,13 +236,13 @@ toggleAutoSell(resource) {
     }
 }
 
+// Custo do próximo nível de um upgrade de clique contínuo. A perfuratriz é
+// mais cara: é o tier final e seu alvo é a cadeia mais profunda do jogo.
 getContinuousClickCost(type) {
-    if (type === 'chainsaw') {
-        return 500 * Math.pow(2.5, this.state.upgrades.chainsawLevel);
-    } else if (type === 'jackhammer') {
-        return 500 * Math.pow(2.5, this.state.upgrades.jackhammerLevel);
-    }
-    return 0;
+    const level = this.state.upgrades[type] || 0;
+    // `type` chega como nome do campo no state (chainsawLevel, pickaxeLevel…).
+    const base = type === 'pickaxeLevel' ? 5000 : 500;
+    return base * Math.pow(2.5, level);
 }
 
 toggleSetting() {
@@ -248,6 +279,19 @@ buyStoneUnlock() {
     }
 }
 
+// Requisito: R$ 150.000 e 100 Materiais de Construção. A metalurgia é o tier
+// final — precisa ficar atrás da cadeia de construção, não ao lado dela.
+buyMetalUnlock() {
+    const s = this.state;
+    if (s.money >= METAL_UNLOCK_COST &&
+        s.inventory.constructionMat >= METAL_UNLOCK_MATS &&
+        !s.unlocks.metalPanel) {
+        s.money -= METAL_UNLOCK_COST;
+        s.inventory.constructionMat -= METAL_UNLOCK_MATS;
+        s.unlocks.metalPanel = true;
+    }
+}
+
 checkUnlocks() {
     if (!this.state.unlocks.upgradesPanel && this.state.stats.totalWoodChopped >= 50) {
         this.state.unlocks.upgradesPanel = true;
@@ -260,18 +304,18 @@ checkUnlocks() {
 
 // Lógica principal rodando no intervalo de tempo (dt em segundos)
 update(dt) {
-    // Lógica do clique contínuo baseada na ação atual
+    // Lógica do clique contínuo baseada na ação atual. O nível vem de
+    // RESOURCES[].holdUpgrade, então segurar o botão de qualquer minério da
+    // metalurgia funciona sem código novo por recurso.
     if (this.holdingAction) {
-        let level = 0;
-        if (this.holdingAction === 'wood') level = this.state.upgrades.chainsawLevel;
-        if (this.holdingAction === 'stone') level = this.state.upgrades.jackhammerLevel;
+        const holdUpgrade = RESOURCES[this.holdingAction]?.holdUpgrade;
+        const level = holdUpgrade ? this.state.upgrades[holdUpgrade] : 0;
 
         if (level > 0) {
             const clicksPerSec = level;
             this.holdProgress += dt;
             while (this.holdProgress >= 1 / clicksPerSec) {
-                if (this.holdingAction === 'wood') this.chopWood();
-                if (this.holdingAction === 'stone') this.mineStone();
+                this.gather(this.holdingAction);
                 this.holdProgress -= 1 / clicksPerSec;
             }
         }
