@@ -1,456 +1,672 @@
 class GameUI {
     constructor(game) {
         this.game = game;
+        this.tab = 'producao';
 
-        // Referências DOM
+        // Referências fixas (não geradas)
         this.elMoney = document.getElementById('money-value');
         this.btnSettings = document.getElementById('btn-settings');
         this.modalSettings = document.getElementById('settings-modal');
         this.btnCloseSettings = document.getElementById('btn-close-settings');
         this.toggleBackground = document.getElementById('toggle-background');
 
-        this.elInvWood = document.getElementById('inv-wood');
-        this.elInvBoard = document.getElementById('inv-board');
-        this.elInvFurniture = document.getElementById('inv-furniture');
-        this.elInvStone = document.getElementById('inv-stone');
-        this.elInvStoneBlock = document.getElementById('inv-stoneBlock');
+        this.btnAchievements = document.getElementById('btn-achievements');
+        this.modalAchievements = document.getElementById('achievements-modal');
+        this.btnCloseAchievements = document.getElementById('btn-close-achievements');
+        this.achievementGrid = document.getElementById('achievement-grid');
+        this.achievementCount = document.getElementById('achievement-count');
+        this.achievementBonusInfo = document.getElementById('achievement-bonus-info');
 
-        this.groupStone = document.getElementById('group-stone');
+        this.modalOffline = document.getElementById('offline-modal');
+        this.btnCloseOffline = document.getElementById('btn-close-offline');
+        this.offlineGains = document.getElementById('offline-gains');
+        this.offlineTime = document.getElementById('offline-time');
 
-        this.btnChopWood = document.getElementById('btn-chop-wood');
-        this.btnMineStone = document.getElementById('btn-mine-stone');
-
-        this.btnSellAll = document.getElementById('btn-sell-all');
-        this.btnSellWood = document.getElementById('btn-sell-wood');
-        this.btnSellBoard = document.getElementById('btn-sell-board');
-        this.btnSellFurniture = document.getElementById('btn-sell-furniture');
-        this.btnSellStone = document.getElementById('btn-sell-stone');
-        this.btnSellStoneBlock = document.getElementById('btn-sell-stoneBlock');
-        this.btnSellConstructionMat = document.getElementById('btn-sell-constructionMat');
-
-        this.elInvConstructionMat = document.getElementById('inv-constructionMat');
-
-        // Construções
-        this.buildings = {
-            woodcutter: {
-                btnBuy: document.getElementById('btn-buy-woodcutter'),
-                elCost: document.getElementById('cost-woodcutter'),
-                elCount: document.getElementById('count-woodcutter'),
-                elSpeed: document.getElementById('speed-woodcutter'),
-                elStatus: document.getElementById('status-woodcutter'),
-                barFill: document.getElementById('progress-woodcutter'),
-                elStorage: document.getElementById('storage-woodcutter'),
-                btnCollect: document.getElementById('btn-collect-woodcutter'),
-                btnAuto: document.getElementById('btn-auto-woodcutter')
-            },
-            refinery: {
-                btnBuy: document.getElementById('btn-buy-refinery'),
-                elCost: document.getElementById('cost-refinery'),
-                elCount: document.getElementById('count-refinery'),
-                elSpeed: document.getElementById('speed-refinery'),
-                elStatus: document.getElementById('status-refinery'),
-                barFill: document.getElementById('progress-refinery'),
-                elStorage: document.getElementById('storage-refinery'),
-                btnCollect: document.getElementById('btn-collect-refinery'),
-                btnAuto: document.getElementById('btn-auto-refinery')
-            },
-            carpentry: {
-                btnBuy: document.getElementById('btn-buy-carpentry'),
-                elCost: document.getElementById('cost-carpentry'),
-                elCount: document.getElementById('count-carpentry'),
-                elSpeed: document.getElementById('speed-carpentry'),
-                elStatus: document.getElementById('status-carpentry'),
-                barFill: document.getElementById('progress-carpentry'),
-                elStorage: document.getElementById('storage-carpentry'),
-                btnCollect: document.getElementById('btn-collect-carpentry'),
-                btnAuto: document.getElementById('btn-auto-carpentry')
-            },
-            stoneMiner: {
-                btnBuy: document.getElementById('btn-buy-stoneMiner'),
-                elCost: document.getElementById('cost-stoneMiner'),
-                elCount: document.getElementById('count-stoneMiner'),
-                elSpeed: document.getElementById('speed-stoneMiner'),
-                elStatus: document.getElementById('status-stoneMiner'),
-                barFill: document.getElementById('progress-stoneMiner'),
-                elStorage: document.getElementById('storage-stoneMiner'),
-                btnCollect: document.getElementById('btn-collect-stoneMiner'),
-                btnAuto: document.getElementById('btn-auto-stoneMiner')
-            },
-            stoneKiln: {
-                btnBuy: document.getElementById('btn-buy-stoneKiln'),
-                elCost: document.getElementById('cost-stoneKiln'),
-                elCount: document.getElementById('count-stoneKiln'),
-                elSpeed: document.getElementById('speed-stoneKiln'),
-                elStatus: document.getElementById('status-stoneKiln'),
-                barFill: document.getElementById('progress-stoneKiln'),
-                elStorage: document.getElementById('storage-stoneKiln'),
-                btnCollect: document.getElementById('btn-collect-stoneKiln'),
-                btnAuto: document.getElementById('btn-auto-stoneKiln')
-            },
-            builder: {
-                btnBuy: document.getElementById('btn-buy-builder'),
-                elCost: document.getElementById('cost-builder'),
-                elCount: document.getElementById('count-builder'),
-                elSpeed: document.getElementById('speed-builder'),
-                elStatus: document.getElementById('status-builder'),
-                barFill: document.getElementById('progress-builder'),
-                elStorage: document.getElementById('storage-builder'),
-                btnCollect: document.getElementById('btn-collect-builder'),
-                btnAuto: document.getElementById('btn-auto-builder')
-            }
-        };
-
-        this.cardStoneMiner = document.getElementById('card-stoneMiner');
-        this.cardStoneKiln = document.getElementById('card-stoneKiln');
-        this.cardBuilder = document.getElementById('card-builder');
-
-        // Upgrades
-        this.panelUpgrades = document.getElementById('panel-upgrades');
-        this.cardSaws = document.getElementById('upg-sharp-saws');
-        this.btnUpgSaws = document.getElementById('btn-upg-saws');
-
-        this.upgChainsaw = document.getElementById('upg-chainsaw');
-        this.btnUpgChainsaw = document.getElementById('btn-upg-chainsaw');
-        this.lvlChainsaw = document.getElementById('lvl-chainsaw');
-        this.costChainsaw = document.getElementById('cost-chainsaw');
-        this.speedChainsaw = document.getElementById('speed-chainsaw');
-
-        this.upgJackhammer = document.getElementById('upg-jackhammer');
-        this.btnUpgJackhammer = document.getElementById('btn-upg-jackhammer');
-        this.lvlJackhammer = document.getElementById('lvl-jackhammer');
-        this.costJackhammer = document.getElementById('cost-jackhammer');
-        this.speedJackhammer = document.getElementById('speed-jackhammer');
-
-        this.upgStoneUnlock = document.getElementById('upg-stoneUnlock');
-        this.btnUpgStoneUnlock = document.getElementById('btn-upg-stoneUnlock');
-        
-        this.upgSmartSell = document.getElementById('upg-smartSell');
-        this.btnUpgSmartSell = document.getElementById('btn-upg-smartSell');
-
-        this.autoSellItems = ['wood', 'board', 'furniture', 'stone', 'stoneBlock', 'constructionMat'];
-        
+        // Containers gerados
+        this.resourceBar = document.getElementById('resource-bar');
+        this.actionBar = document.getElementById('action-bar');
+        this.chainList = document.getElementById('chain-list');
         this.statsContainer = document.getElementById('stats-container');
 
+        // Árvore de pesquisa
+        this.techTree = document.getElementById('tech-tree');
+        this.treeSvg = document.getElementById('tree-links');
+        this.treeDetail = document.getElementById('tree-detail');
+        this.treeNodes = {};
+        this.treeProducers = () => [];
+
+        // Preços são estáticos: escritos uma vez no render, não por frame.
+        for (const id in this.res) this.res[id].price.innerText = this.formatMoney(RESOURCES[id].price);
+
+        // Upgrades (markup fixo, fora do escopo da extração)
+        this.tabMelhorias = document.querySelector('[data-tab="melhorias"]');
+        this.panelMelhorias = document.querySelector('[data-panel="melhorias"]');
+        this.upgStoneUnlock = document.getElementById('upg-stoneUnlock');
+        this.btnUpgStoneUnlock = document.getElementById('btn-upg-stoneUnlock');
+        this.btnUpgSaws = document.getElementById('btn-upg-saws');
+        this.btnUpgSmartSell = document.getElementById('btn-upg-smartSell');
+        this.upgMetalUnlock = document.getElementById('upg-metalUnlock');
+        this.btnUpgMetalUnlock = document.getElementById('btn-upg-metalUnlock');
+
+        // Mapas de referência, preenchidos no render. Resolvidos UMA vez — antes
+        // eram 18 getElementById por frame dentro do updateUI.
+        this.res = {};        // resourceId -> { count, sell, auto, ind, box }
+        this.acts = {};       // actionId  -> botão
+        this.cards = {};      // buildingId-> { card, count, cost, speed, status, bar, storage, storageRow, collect, buy, auto }
+        this.upgCards = {};   // buildingId-> card, para esconder por unlock
+
+        this.render();
         this.bindEvents();
     }
 
+    // ------------------------------------------------------------- renderização
+
+    // Estrutura completa de uma vez: barra, ações e cards. Recursos de cadeia
+    // bloqueada são desenhados escondidos em vez de ausentes, para que o unlock
+    // (que acontece no meio da sessão) não exija re-render e não perca os
+    // listeners de clique.
+    render() {
+        this.renderResources();
+        this.renderActions();
+        this.renderChains();
+        this.renderTree();
+    }
+
+    renderResources() {
+        this.resourceBar.innerHTML = Object.keys(RESOURCES).map(id => {
+            const r = RESOURCES[id];
+            return `
+                <div class="res-chip" data-res="${id}" style="--chain: ${GROUPS[r.group].color}">
+                    <span class="res-chip-icon">${r.icon}</span>
+                    <div class="res-chip-body">
+                        <span class="res-chip-name">${r.short}</span>
+                        <span class="res-chip-count" data-count>0</span>
+                        <span class="res-chip-rate" data-rate></span>
+                    </div>
+                    <div class="res-chip-actions">
+                        <div class="auto-sell-box hidden" data-box>
+                            <button class="btn-toggle-sell" data-action="autosell" data-id="${id}"
+                                title="Venda automática de ${r.name}">AUTO</button>
+                        </div>
+                        <button class="btn btn-sell" data-action="sell" data-id="${id}"
+                            title="Vender ${r.name}">R$ <span data-price></span></button>
+                    </div>
+                </div>
+            `;
+        }).join('') + `
+            <button class="btn btn-secondary res-sell-all" data-action="sellall">💰 Vender Tudo</button>
+        `;
+
+        for (const el of this.resourceBar.querySelectorAll('[data-res]')) {
+            const id = el.dataset.res;
+            this.res[id] = {
+                root: el,
+                count: el.querySelector('[data-count]'),
+                rate: el.querySelector('[data-rate]'),
+                price: el.querySelector('[data-price]'),
+                sell: el.querySelector('[data-action="sell"]'),
+                auto: el.querySelector('[data-action="autosell"]'),
+                box: el.querySelector('[data-box]')
+            };
+        }
+    }
+
+    renderActions() {
+        // Botões de coleta manual, derivados de RESOURCES[].manual. Um recurso
+        // novo com coleta manual ganha botão sem código novo.
+        this.actionBar.innerHTML = Object.keys(RESOURCES)
+            .filter(id => RESOURCES[id].manual)
+            .map(id => {
+                const r = RESOURCES[id];
+                return `
+                    <button class="btn btn-primary click-effect" data-manual="${id}"
+                        style="user-select:none; -webkit-user-select:none;">
+                        <span class="icon">${r.icon}</span>
+                        <span>${r.name}</span>
+                    </button>
+                `;
+            }).join('');
+
+        for (const el of this.actionBar.querySelectorAll('[data-manual]')) {
+            this.acts[el.dataset.manual] = el;
+        }
+    }
+
+    renderChains() {
+        const groups = {};
+        for (const g in GROUPS) {
+            const ids = Object.keys(BUILDINGS).filter(id => BUILDINGS[id].group === g);
+            // Cadeia sem prédio (a metalurgia ainda não existe) mostraria um
+            // cabeçalho vazio. Some até ter conteúdo.
+            if (ids.length === 0) continue;
+            groups[g] = ids;
+        }
+
+        this.chainList.innerHTML = Object.keys(groups).map(g => {
+            const def = GROUPS[g];
+            const cards = groups[g].map(id => this.buildingCardHTML(id)).join('');
+            return `
+                <div class="chain" data-chain="${g}" style="--chain: ${def.color}">
+                    <h3 class="chain-title">${def.name}</h3>
+                    <div class="chain-cards">${cards}</div>
+                </div>
+            `;
+        }).join('');
+
+        for (const el of this.chainList.querySelectorAll('.building-card')) {
+            const id = el.dataset.building;
+            this.cards[id] = {
+                card: el,
+                count: el.querySelector('[data-b="count"]'),
+                cost: el.querySelector('[data-b="cost"]'),
+                speed: el.querySelector('[data-b="speed"]'),
+                status: el.querySelector('[data-b="status"]'),
+                bar: el.querySelector('[data-b="bar"]'),
+                storage: el.querySelector('[data-b="storage"]'),
+                storageRow: el.querySelector('.storage-container'),
+                collect: el.querySelector('[data-action="collect"]'),
+                auto: el.querySelector('[data-action="auto"]'),
+                buy: el.querySelector('[data-action="buy"]')
+            };
+        }
+    }
+
+    buildingCardHTML(id) {
+        const b = BUILDINGS[id];
+        const recipe = b.inputs.length === 0
+            ? `Gera 1 ${RESOURCES[b.output].name}`
+            : b.inputs.map(i => `${i.qty} ${RESOURCES[i.id].name}`).join(' + ') +
+              ` = 1 ${RESOURCES[b.output].name}`;
+
+        return `
+            <div class="building-card" data-building="${id}" data-bgroup="${b.group}">
+                <div class="building-header">
+                    <div>
+                        <h3>${b.icon} ${b.name}</h3>
+                        <p class="building-desc">${b.desc || recipe}</p>
+                    </div>
+                    <span class="badge" data-b="count">0</span>
+                </div>
+                <div class="progress-container">
+                    <div class="progress-info">
+                        <span data-b="speed">-- / ciclo</span>
+                        <span data-b="status" class="status-working">Parado</span>
+                    </div>
+                    <div class="progress-bar-bg">
+                        <div class="progress-bar-fill" data-b="bar"></div>
+                    </div>
+                </div>
+                <div class="storage-container">
+                    <div class="storage-info">Estoque: <span data-b="storage">0</span></div>
+                    <div class="storage-actions">
+                        <button class="btn btn-small" data-action="collect" data-id="${id}">Coletar</button>
+                        <button class="btn btn-small btn-auto" data-action="auto" data-id="${id}">⭐️ Autocoleta</button>
+                    </div>
+                </div>
+                <div class="building-footer">
+                    <button class="btn btn-buy" data-action="buy" data-id="${id}">Comprar (R$ <span data-b="cost">0</span>)</button>
+                </div>
+            </div>
+        `;
+    }
+
+    // ------------------------------------------------------------------- eventos
+
     bindEvents() {
-        const handleDown = (e, actionType, btn) => {
-            if (e.type === 'mousedown' && e.button !== 0) return;
-            e.preventDefault();
-            this.game.setHoldingAction(actionType);
-            btn.style.transform = 'scale(0.95)';
-        };
+        this.btnSettings.addEventListener('click', () => this.modalSettings.classList.remove('hidden'));
+        this.btnCloseSettings.addEventListener('click', () => this.modalSettings.classList.add('hidden'));
+        this.toggleBackground.addEventListener('change', () => this.game.toggleSetting());
 
-        const handleUp = (e, actionType, btn) => {
-            if (e.type === 'mouseup' && e.button !== 0) return;
-            e.preventDefault();
-            
-            if (this.game.holdingAction === actionType) {
-                if (actionType === 'wood') this.game.chopWood();
-                if (actionType === 'stone') this.game.mineStone();
-                
-                if (this.game.state.stats.manualClicks % 25 === 0) {
-                    this.showToast('+1 ' + actionType); 
-                }
+        this.btnCloseOffline.addEventListener('click', () => this.modalOffline.classList.add('hidden'));
+        this.btnCloseAchievements.addEventListener('click', () => this.modalAchievements.classList.add('hidden'));
+        this.btnAchievements.addEventListener('click', () => {
+            this.renderAchievements();
+            this.modalAchievements.classList.remove('hidden');
+        });
+
+        this.btnUpgStoneUnlock.addEventListener('click', () => { this.game.buyStoneUnlock(); this.updateUI(); });
+        this.btnUpgSaws.addEventListener('click', () => { this.game.buyUpgrade('sharpSaws'); this.updateUI(); });
+        this.btnUpgSmartSell.addEventListener('click', () => { this.game.buyUpgrade('smartSell'); this.updateUI(); });
+        this.btnUpgMetalUnlock.addEventListener('click', () => { this.game.buyMetalUnlock(); this.updateUI(); });
+
+        // Os upgrades de clique contínuo seguem um padrão id <key>Level, então
+        // um listener por card, sem delegação.
+        for (const key of ['chainsaw', 'jackhammer', 'pickaxe']) {
+            document.getElementById(`btn-upg-${key}Level`)
+                .addEventListener('click', () => { this.game.buyUpgrade(`${key}Level`); this.updateUI(); });
+        }
+
+        // Um listener delegado cobre abas, venda, autocoleta e compra. Fica em
+        // document (não no container) porque um container re-renderizado por
+        // innerHTML levaria o listener junto, silenciosamente.
+        document.addEventListener('click', (e) => {
+            const tab = e.target.closest('[data-tab]');
+            if (tab) {
+                this.selectTab(tab.dataset.tab);
+                return;
             }
-            this.game.setHoldingAction(null);
-            btn.style.transform = '';
-            this.updateUI();
-        };
 
-        const bindHoldActions = (btn, actionType) => {
-            if (!btn) return;
-            btn.addEventListener('mousedown', (e) => handleDown(e, actionType, btn));
-            btn.addEventListener('mouseup', (e) => handleUp(e, actionType, btn));
+            const act = e.target.closest('[data-action]');
+            if (!act) return;
+            const { action, id } = act.dataset;
+
+            switch (action) {
+                case 'sell':    this.game.sell(id); break;
+                case 'sellall': this.game.sellAll(); break;
+                case 'autosell':this.game.toggleAutoSell(id); break;
+                case 'buy':     this.game.buyBuilding(id); break;
+                case 'collect': this.game.collectOutput(id); break;
+                case 'auto':    this.game.buyAutoCollect(id); break;
+            }
+            this.updateUI();
+        });
+
+        // Nós da árvore: clique mostra a receita. Delegado porque os nós são
+        // gerados.
+        this.techTree.addEventListener('click', (e) => {
+            const node = e.target.closest('[data-node]');
+            if (node) this.showTreeNode(node.dataset.node);
+        });
+
+        // Coleta manual precisa de mousedown/touchstart, não de click — e precisa
+        // da referência do elemento para o feedback visual do scale.
+        for (const id in this.acts) {
+            const btn = this.acts[id];
+            const down = (ev) => {
+                if (ev.type === 'mousedown' && ev.button !== 0) return;
+                ev.preventDefault();
+                this.game.setHoldingAction(id);
+                btn.style.transform = 'scale(0.95)';
+            };
+            const up = () => {
+                if (this.game.holdingAction === id) this.game.gather(id);
+                this.game.setHoldingAction(null);
+                btn.style.transform = '';
+                this.updateUI();
+            };
+
+            btn.addEventListener('mousedown', down);
+            btn.addEventListener('mouseup', up);
             btn.addEventListener('mouseleave', () => {
-                if (this.game.holdingAction === actionType) {
+                if (this.game.holdingAction === id) {
                     this.game.setHoldingAction(null);
                     btn.style.transform = '';
                 }
             });
-            btn.addEventListener('touchstart', (e) => handleDown(e, actionType, btn), { passive: false });
-            btn.addEventListener('touchend', (e) => handleUp(e, actionType, btn));
-            btn.addEventListener('contextmenu', e => e.preventDefault());
+            btn.addEventListener('touchstart', down, { passive: false });
+            btn.addEventListener('touchend', up);
+            btn.addEventListener('contextmenu', (ev) => ev.preventDefault());
+        }
+    }
+
+    selectTab(name) {
+        this.tab = name;
+        for (const b of document.querySelectorAll('[data-tab]')) {
+            b.setAttribute('aria-selected', String(b.dataset.tab === name));
+        }
+        for (const p of document.querySelectorAll('[data-panel]')) {
+            p.classList.toggle('hidden', p.dataset.panel !== name);
+        }
+        this.updateUI();
+    }
+
+    // ---------------------------------------------------------------- atualização
+
+    updateUI(force) {
+        const s = this.game.state;
+
+        // Conquistas recém-desbloqueadas são postadas aqui (1x por frame) em vez
+        // de no motor, que não tem acesso à UI.
+        if (this.game.onAchievementUnlocked) {
+            const unlocked = this.game.onAchievementUnlocked;
+            this.game.onAchievementUnlocked = null;
+            for (const a of unlocked) {
+                this.showToast(`🏆 ${a.name}! (+${(ACHIEVEMENT_BONUS * 100).toFixed(0)}% produção)`);
+            }
+        }
+
+        if (this.toggleBackground.checked !== s.settings.runInBackground) {
+            this.toggleBackground.checked = s.settings.runInBackground;
+        }
+        this.elMoney.innerText = this.formatMoney(s.money);
+
+        this.updateResourceBar();
+
+        // Visibilidade da aba de Melhorias não depende de ela estar ativa —
+        // precisa ser avaliada sempre, senão nunca esconderia.
+        this.tabMelhorias.classList.toggle('hidden', !s.unlocks.upgradesPanel);
+        if (this.tab === 'melhorias' && !s.unlocks.upgradesPanel) {
+            this.selectTab('producao');
+        }
+
+        // Aba oculta não é atualizada: o DOM de um painel escondido está velho por
+        // definição, então escrever nele é desperdício. selectTab() chama
+        // updateUI() e o painel exibido nasce certo.
+        if (this.tab === 'producao') this.updateProduction();
+        if (this.tab === 'melhorias') this.updateUpgrades();
+        if (this.tab === 'arvore') this.updateTree();
+        if (this.tab === 'stats') this.renderStats(force);
+    }
+
+    updateResourceBar() {
+        const s = this.game.state;
+        for (const id in this.res) {
+            const ui = this.res[id];
+
+            // Tudo é desenhado no boot; o unlock só revela.
+            const visible = this.game.isResourceUnlocked(id);
+            ui.root.classList.toggle('hidden', !visible);
+            if (this.acts[id]) this.acts[id].classList.toggle('hidden', !visible);
+            if (!visible) continue;
+
+            ui.count.innerText = this.formatCount(s.inventory[id]);
+            ui.sell.disabled = s.inventory[id] === 0;
+
+            const rate = this.game.getResourceRate(id);
+            ui.rate.innerText = rate > 0 ? `+${this.formatRate(rate)}/s` : '';
+            ui.root.classList.toggle('no-rate', rate === 0);
+
+            if (s.unlocks.smartSell) {
+                ui.box.classList.remove('hidden');
+                const on = s.autoSell[id];
+                ui.auto.classList.toggle('active', on);
+                ui.auto.innerText = on ? 'ON' : 'OFF';
+            } else {
+                ui.box.classList.add('hidden');
+            }
+        }
+    }
+
+    updateProduction() {
+        const s = this.game.state;
+        for (const id in this.cards) {
+            const ui = this.cards[id];
+            ui.card.classList.toggle('hidden', !this.game.isBuildingUnlocked(id));
+            if (ui.card.classList.contains('hidden')) continue;
+            this.updateBuildingCard(id, ui);
+        }
+    }
+
+    updateBuildingCard(id, ui) {
+        const s = this.game.state;
+        const def = BUILDINGS[id];
+        const b = s.buildings[id];
+        const cost = this.game.getBuildingCost(id);
+        const speed = this.game.getBuildingSpeed(id);
+
+        ui.count.innerText = b.count;
+        ui.cost.innerText = this.formatMoney(cost);
+        ui.buy.disabled = s.money < cost;
+
+        if (b.count === 0) {
+            ui.speed.innerText = `${def.baseTime}s / ciclo`;
+            ui.bar.style.width = '0%';
+            ui.status.innerText = 'Parado (Compre para iniciar)';
+            ui.status.className = 'status-idle';
+            return;
+        }
+
+        ui.speed.innerText = speed >= 1
+            ? `${speed.toFixed(1)} / segundo`
+            : `${(1 / speed).toFixed(1)}s / ciclo`;
+
+        // Um gerador não consome insumo, então "produzindo" é o estado padrão.
+        const isGenerator = def.inputs.length === 0;
+        const hasInputs = def.inputs.every(i => s.inventory[i.id] >= i.qty);
+
+        if (isGenerator || hasInputs) {
+            ui.status.innerText = 'Produzindo...';
+            ui.status.className = 'status-working';
+        } else {
+            ui.status.innerText = 'Parado (Sem recursos)';
+            ui.status.className = 'status-blocked';
+        }
+
+        // Barra a 100% quando produz 1+/s, para não piscar enlouquecidamente.
+        ui.bar.style.width = speed >= 1 ? '100%' : `${Math.min(b.progress * 100, 100)}%`;
+
+        ui.storageRow.classList.toggle('hidden', b.autoCollect);
+        if (!b.autoCollect) {
+            ui.storage.innerText = this.formatCount(b.storedOutput);
+            ui.collect.disabled = b.storedOutput < 1;
+            ui.auto.innerText = `⭐️ Autocoleta (R$ ${this.formatMoney(def.autoCollectCost)})`;
+            ui.auto.disabled = s.money < def.autoCollectCost;
+        }
+    }
+
+    updateUpgrades() {
+        const s = this.game.state;
+
+        // Explorar Pedreira e Fundir Metais somem depois de destravados.
+        this.upgStoneUnlock.classList.toggle('hidden', s.unlocks.stonePanel);
+        this.btnUpgStoneUnlock.disabled = s.money < 3000 || s.inventory.furniture < 100;
+
+        const showMetal = s.unlocks.stonePanel && !s.unlocks.metalPanel;
+        this.upgMetalUnlock.classList.toggle('hidden', !showMetal);
+        this.btnUpgMetalUnlock.disabled =
+            s.money < METAL_UNLOCK_COST || s.inventory.constructionMat < METAL_UNLOCK_MATS;
+
+        if (s.upgrades.sharpSaws) {
+            this.btnUpgSaws.innerText = 'Comprado';
+            this.btnUpgSaws.disabled = true;
+        } else {
+            this.btnUpgSaws.disabled = s.money < 100;
+        }
+
+        if (s.unlocks.smartSell) {
+            this.btnUpgSmartSell.innerText = 'Comprado';
+            this.btnUpgSmartSell.disabled = true;
+        } else {
+            this.btnUpgSmartSell.disabled = s.money < 2000;
+        }
+
+        // Upgrades de clique contínuo: três cards com a mesma forma.
+        this.updateHoldUpgrade('chainsaw', s, !s.unlocks.continuousClick);
+        this.updateHoldUpgrade('jackhammer', s, !(s.unlocks.continuousClick && s.unlocks.stonePanel));
+        this.updateHoldUpgrade('pickaxe', s, !(s.unlocks.continuousClick && s.unlocks.metalPanel));
+    }
+
+    updateHoldUpgrade(key, s, hidden) {
+        const card = document.getElementById(`upg-${key}`);
+        const btn = document.getElementById(`btn-upg-${key}Level`);
+        const lvl = document.getElementById(`lvl-${key}`);
+        const cost = document.getElementById(`cost-${key}`);
+        const speed = document.getElementById(`speed-${key}`);
+
+        card.classList.toggle('hidden', hidden);
+        if (hidden) return;
+
+        const level = s.upgrades[`${key}Level`];
+        lvl.innerText = level;
+        speed.innerText = level > 0 ? `(${level}/seg)` : '';
+        const c = this.game.getContinuousClickCost(`${key}Level`);
+        cost.innerText = this.formatMoney(c);
+        btn.disabled = s.money < c;
+    }
+
+    // ------------------------------------------------------- árvore de pesquisa
+    //
+    // Lê exclusivamente de BUILDINGS — nenhuma receita duplicada aqui. A
+    // topologia (tier, predecessores) é derivada do próprio grafo de produção:
+    // um prédio está num tier acima do mais profundo dos seus insumos.
+
+    buildTreeModel() {
+        // Produtores de um recurso, para desenhar as arestas e resolver os tiers.
+        const producers = {};
+        for (const id in BUILDINGS) {
+            const out = BUILDINGS[id].output;
+            (producers[out] = producers[out] || []).push(id);
+        }
+        this.treeProducers = (r) => producers[r] || [];
+
+        // Tier = profundidade na cadeia: 1 + o tier mais profundo dos produtos
+        // que o alimentam. Precisa de memoização recursiva, não de um for na
+        // ordem de declaração — a ordem dos dados não é topológica (a Siderúrgica
+        // vem antes das Fundições), e um simples `tiers[p.id] ?? 0` resolveria
+        // todo mundo como tier 1.
+        const tiers = {};
+        const tierOf = (id, seen = new Set()) => {
+            if (tiers[id] !== undefined) return tiers[id];
+            // Um ciclo no grafo travaria a recursão; o assert de aciclicidade
+            // cobre isso, e o fallback mantém a UI de pé se um dia acontecer.
+            if (seen.has(id)) return 1;
+            seen.add(id);
+
+            const ins = BUILDINGS[id].inputs;
+            const parentTier = ins.length === 0
+                ? 0
+                : Math.max(...ins.map(i => Math.max(0, ...this.treeProducers(i.id).map(p => tierOf(p, seen)))));
+
+            tiers[id] = parentTier + 1;
+            return tiers[id];
         };
 
-        // UI Settings
-        this.btnSettings.addEventListener('click', () => {
-            this.modalSettings.classList.remove('hidden');
-        });
+        for (const id in BUILDINGS) tierOf(id);
 
-        this.btnCloseSettings.addEventListener('click', () => {
-            this.modalSettings.classList.add('hidden');
-        });
-
-        this.toggleBackground.addEventListener('change', () => {
-            this.game.toggleSetting();
-        });
-
-        bindHoldActions(this.btnChopWood, 'wood');
-        bindHoldActions(this.btnMineStone, 'stone');
-
-        this.btnSellWood.addEventListener('click', () => { this.game.sell('wood'); this.updateUI(); });
-        this.btnSellBoard.addEventListener('click', () => { this.game.sell('board'); this.updateUI(); });
-        this.btnSellFurniture.addEventListener('click', () => { this.game.sell('furniture'); this.updateUI(); });
-        this.btnSellStone.addEventListener('click', () => { this.game.sell('stone'); this.updateUI(); });
-        this.btnSellStoneBlock.addEventListener('click', () => { this.game.sell('stoneBlock'); this.updateUI(); });
-        this.btnSellConstructionMat.addEventListener('click', () => { this.game.sell('constructionMat'); this.updateUI(); });
-        this.btnSellAll.addEventListener('click', () => { this.game.sellAll(); this.updateUI(); });
-
-        // Toggles Customizados
-        this.autoSellItems.forEach(item => {
-            const btn = document.getElementById(`tg-sell-${item}`);
-            if (btn) {
-                btn.addEventListener('click', () => {
-                    this.game.toggleAutoSell(item);
-                    this.updateUI();
-                });
-            }
-        });
-
-        Object.keys(this.buildings).forEach(id => {
-            this.buildings[id].btnBuy.addEventListener('click', () => {
-                this.game.buyBuilding(id);
-                this.updateUI();
-            });
-            this.buildings[id].btnCollect.addEventListener('click', () => {
-                this.game.collectOutput(id);
-                this.updateUI();
-            });
-            this.buildings[id].btnAuto.addEventListener('click', () => {
-                this.game.buyAutoCollect(id);
-                this.updateUI();
-            });
-        });
-
-        this.btnUpgSaws.addEventListener('click', () => {
-            this.game.buyUpgrade('sharpSaws');
-            this.updateUI();
-        });
-
-        this.btnUpgChainsaw.addEventListener('click', () => {
-            this.game.buyUpgrade('chainsaw');
-            this.updateUI();
-        });
-
-        this.btnUpgJackhammer.addEventListener('click', () => {
-            this.game.buyUpgrade('jackhammer');
-            this.updateUI();
-        });
-
-        this.btnUpgSmartSell.addEventListener('click', () => {
-            this.game.buyUpgrade('smartSell');
-            this.updateUI();
-        });
-
-        this.btnUpgStoneUnlock.addEventListener('click', () => {
-            this.game.buyStoneUnlock();
-            this.updateUI();
-        });
+        return { tiers, producers };
     }
+
+    renderTree() {
+        const { tiers } = this.buildTreeModel();
+
+        // Só os nós são reescritos: o <svg> de conectores é filho de
+        // #tech-tree, e innerHTML no container inteiro o apagaria.
+        const nodes = Object.keys(BUILDINGS).map(id => {
+            const b = BUILDINGS[id];
+            return `
+                <button class="tree-node" data-node="${id}" data-tier="${tiers[id]}"
+                        style="--chain: ${GROUPS[b.group].color}">
+                    <span class="tree-node-icon">${b.icon}</span>
+                    <span class="tree-node-name">${b.name}</span>
+                    <span class="tree-node-state" data-state></span>
+                </button>
+            `;
+        }).join('');
+
+        this.techTree.insertAdjacentHTML('afterbegin', nodes);
+
+        // Colunas por tier: CSS não lê atributo, então o tier vai como custom
+        // property lida pelo stylesheet (--tier no nó, --cols no container).
+        const maxTier = Math.max(...Object.values(tiers));
+        this.techTree.style.setProperty('--cols', maxTier);
+        for (const el of this.techTree.querySelectorAll('[data-node]')) {
+            el.style.setProperty('--tier', el.dataset.tier);
+            this.treeNodes[el.dataset.node] = el;
+        }
+    }
+
+    updateTree() {
+        const s = this.game.state;
+        const { producers } = this.buildTreeModel();
+
+        for (const id in this.treeNodes) {
+            const el = this.treeNodes[id];
+            const unlocked = this.game.isBuildingUnlocked(id);
+            const count = s.buildings[id].count;
+
+            // Três estados: comprado, disponível, bloqueado. A árvore mostra o
+            // caminho à frente, então bloqueado é esmaecido e não oculto.
+            el.classList.toggle('owned', count > 0);
+            el.classList.toggle('available', unlocked && count === 0);
+            el.classList.toggle('locked', !unlocked);
+            el.querySelector('[data-state]').innerText =
+                count > 0 ? `${count}` : (unlocked ? 'disponível' : '');
+        }
+
+        this.drawTreeLinks(producers);
+    }
+
+    // Conectores em SVG: um único <path> com todos os segmentos, em vez de um
+    // elemento por aresta. Precisa de SVG porque as arestas cruzam colunas e a
+    // topologia não é uma grade — o CSS puro não resolve isso sem position:absolute
+    // em cada nó.
+    drawTreeLinks(producers) {
+        const rect = this.techTree.getBoundingClientRect();
+        if (rect.width === 0) return;
+
+        let d = '';
+        for (const id in BUILDINGS) {
+            const from = this.treeNodes[id].getBoundingClientRect();
+            for (const input of BUILDINGS[id].inputs) {
+                for (const p of producers[input.id] || []) {
+                    const to = this.treeNodes[p].getBoundingClientRect();
+                    // Sai pela direita do produtor, entra pela esquerda do
+                    // consumidor: as colunas são tiers crescentes.
+                    const x1 = from.right - rect.left;
+                    const y1 = from.top + from.height / 2 - rect.top;
+                    const x2 = to.left - rect.left;
+                    const y2 = to.top + to.height / 2 - rect.top;
+                    const mid = (x1 + x2) / 2;
+                    d += `M${x1},${y1} C${mid},${y1} ${mid},${y2} ${x2},${y2} `;
+                }
+            }
+        }
+        // innerHTML em <svg> não cria elementos no namespace SVG nos navegadores
+        // (vira HTML desconhecido e não renderiza). Um único <path> com todos os
+        // segmentos, construído via createElementNS.
+        const old = this.treeSvg.querySelector('path');
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.setAttribute('d', d);
+        if (old) this.treeSvg.replaceChild(path, old);
+        else this.treeSvg.appendChild(path);
+    }
+
+    showTreeNode(id) {
+        const b = BUILDINGS[id];
+        const s = this.game.state;
+        const count = s.buildings[id].count;
+        const speed = this.game.getBuildingSpeed(id);
+
+        const inputs = b.inputs.length === 0
+            ? `<p class="tree-detail-line">Gerador — não consome insumo.</p>`
+            : `<p class="tree-detail-line">${b.inputs
+                .map(i => `${i.qty}× ${RESOURCES[i.id].name}`)
+                .join(' + ')} → 1× ${RESOURCES[b.output].name}</p>`;
+
+        const status = count === 0
+            ? (this.game.isBuildingUnlocked(id) ? 'Disponível para construir' : '🔒 Requer ' + (GROUPS[b.group].requires === 'metalPanel' ? 'Fundir Metais' : 'Explorar Pedreira'))
+            : `Você tem ${count} · ${speed >= 1 ? speed.toFixed(1) : (1 / speed).toFixed(1) + 's/ciclo'}`;
+
+        this.treeDetail.innerHTML = `
+            <div class="tree-detail-head" style="--chain: ${GROUPS[b.group].color}">
+                <span class="tree-detail-icon">${b.icon}</span>
+                <div>
+                    <h4>${b.name}</h4>
+                    <p class="tree-detail-group">${GROUPS[b.group].name}</p>
+                </div>
+            </div>
+            <p class="tree-detail-desc">${b.desc}</p>
+            ${inputs}
+            <div class="tree-detail-stats">
+                <span>Próximo: <strong>R$ ${this.formatMoney(this.game.getBuildingCost(id))}</strong></span>
+                <span>Autocoleta: <strong>R$ ${this.formatMoney(b.autoCollectCost)}</strong></span>
+                <span>Vende por: <strong>R$ ${this.formatMoney(RESOURCES[b.output].price)}</strong></span>
+            </div>
+            <p class="tree-detail-status">${status}</p>
+        `;
+    }
+
+    // ------------------------------------------------------------------ formatação
 
     formatMoney(value) {
         return value.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,');
     }
 
-    updateUI() {
-        const s = this.game.state;
-
-        // Settings Toggle Update
-        if (this.toggleBackground.checked !== s.settings.runInBackground) {
-            this.toggleBackground.checked = s.settings.runInBackground;
-        }
-
-        // Dinheiro
-        this.elMoney.innerText = this.formatMoney(s.money);
-
-        // Inventário
-        if (this.elInvWood) this.elInvWood.innerText = Math.floor(s.inventory.wood);
-        if (this.elInvBoard) this.elInvBoard.innerText = Math.floor(s.inventory.board);
-        if (this.elInvFurniture) this.elInvFurniture.innerText = Math.floor(s.inventory.furniture);
-        if (this.elInvStone) this.elInvStone.innerText = Math.floor(s.inventory.stone);
-        if (this.elInvStoneBlock) this.elInvStoneBlock.innerText = Math.floor(s.inventory.stoneBlock);
-        if (this.elInvConstructionMat) this.elInvConstructionMat.innerText = Math.floor(s.inventory.constructionMat);
-
-        // Auto Sell Toggles & Indicators
-        this.autoSellItems.forEach(item => {
-            const box = document.getElementById(`box-sell-${item}`);
-            const btn = document.getElementById(`tg-sell-${item}`);
-            const ind = document.getElementById(`ind-sell-${item}`);
-            if (box && btn && ind) {
-                if (s.unlocks.smartSell) {
-                    box.classList.remove('hidden');
-                    const isActive = s.autoSell[item];
-                    
-                    if (isActive) {
-                        btn.classList.add('active');
-                        btn.innerText = "ON";
-                        // Update opacity based on timer
-                        ind.style.opacity = this.game.autoSellTimer / 10;
-                    } else {
-                        btn.classList.remove('active');
-                        btn.innerText = "OFF";
-                        ind.style.opacity = 0;
-                    }
-                }
-            }
-        });
-
-        // Botões de Venda P/ Ativação
-        this.btnSellWood.disabled = s.inventory.wood === 0;
-        this.btnSellBoard.disabled = s.inventory.board === 0;
-        this.btnSellFurniture.disabled = s.inventory.furniture === 0;
-        if (this.btnSellStone) this.btnSellStone.disabled = s.inventory.stone === 0;
-        if (this.btnSellStoneBlock) this.btnSellStoneBlock.disabled = s.inventory.stoneBlock === 0;
-        if (this.btnSellConstructionMat) this.btnSellConstructionMat.disabled = s.inventory.constructionMat === 0;
-
-        let totalResources = s.inventory.wood + s.inventory.board + s.inventory.furniture + s.inventory.stone + s.inventory.stoneBlock + s.inventory.constructionMat;
-        this.btnSellAll.disabled = totalResources === 0;
-
-        // Construções (Madeira)
-        this.updateBuildingUI('woodcutter', s.money, 999); // 999 fake resource count
-        this.updateBuildingUI('refinery', s.money, s.inventory.wood);
-        this.updateBuildingUI('carpentry', s.money, s.inventory.board);
-
-        // Stone Unlocks
-        if (s.unlocks.stonePanel) {
-            this.groupStone.classList.remove('hidden');
-            this.btnMineStone.classList.remove('hidden');
-            this.cardStoneMiner.classList.remove('hidden');
-            this.cardStoneKiln.classList.remove('hidden');
-            this.cardBuilder.classList.remove('hidden');
-            this.upgStoneUnlock.classList.add('hidden'); // Some
-
-            this.updateBuildingUI('stoneMiner', s.money, 999);
-            this.updateBuildingUI('stoneKiln', s.money, s.inventory.stone);
-            
-            // O updateBuildingUI padrão aceita um input só. Construtora tem dois. 
-            // Para simplificar a UI passamos a qnt que limitaria.
-            const minMats = Math.min(s.inventory.board, s.inventory.stoneBlock);
-            this.updateBuildingUI('builder', s.money, minMats);
-        } else {
-            // Botão Unlock Stone (Custa R$ 3k e 100 móveis)
-            this.btnUpgStoneUnlock.disabled = s.money < 3000 || s.inventory.furniture < 100;
-        }
-
-        // Upgrades Panel
-        if (s.unlocks.upgradesPanel) {
-            this.panelUpgrades.classList.remove('hidden');
-            this.upgSmartSell.classList.remove('hidden');
-        }
-
-        // Saws
-        if (s.upgrades.sharpSaws) {
-            this.btnUpgSaws.innerText = "Comprado";
-            this.btnUpgSaws.disabled = true;
-            this.btnUpgSaws.classList.remove('btn-upgrade');
-            this.btnUpgSaws.style.background = "var(--accent-green)";
-        } else {
-            this.btnUpgSaws.disabled = s.money < 100;
-        }
-
-        // Smart Sell 
-        if (s.unlocks.smartSell) {
-            this.btnUpgSmartSell.innerText = "Comprado";
-            this.btnUpgSmartSell.disabled = true;
-            this.btnUpgSmartSell.style.background = "var(--accent-green)";
-            this.btnUpgSmartSell.classList.remove('btn-upgrade');
-        } else {
-            this.btnUpgSmartSell.disabled = s.money < 2000;
-        }
-
-        // Chainsaw
-        if (s.unlocks.continuousClick) {
-            this.upgChainsaw.classList.remove('hidden');
-            this.lvlChainsaw.innerText = s.upgrades.chainsawLevel;
-            if (this.speedChainsaw && s.upgrades.chainsawLevel > 0) this.speedChainsaw.innerText = `(${s.upgrades.chainsawLevel}/seg)`;
-            const chainCost = this.game.getContinuousClickCost('chainsaw');
-            this.costChainsaw.innerText = this.formatMoney(chainCost);
-            this.btnUpgChainsaw.disabled = s.money < chainCost;
-        }
-
-        // Jackhammer
-        if (s.unlocks.continuousClick && s.unlocks.stonePanel) {
-            this.upgJackhammer.classList.remove('hidden');
-            this.lvlJackhammer.innerText = s.upgrades.jackhammerLevel;
-            if (this.speedJackhammer && s.upgrades.jackhammerLevel > 0) this.speedJackhammer.innerText = `(${s.upgrades.jackhammerLevel}/seg)`;
-            const jackCost = this.game.getContinuousClickCost('jackhammer');
-            this.costJackhammer.innerText = this.formatMoney(jackCost);
-            this.btnUpgJackhammer.disabled = s.money < jackCost;
-        }
-        
-        this.renderStats();
+    formatCount(value) {
+        return Math.floor(value).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
     }
 
-    updateBuildingUI(id, currentMoney, inputResourceCount) {
-        const bData = this.game.state.buildings[id];
-        const ui = this.buildings[id];
-        const cost = this.game.getBuildingCost(id);
-        const speed = this.game.getBuildingSpeed(id); // itens por segundo
+    // Taxas variam em 4 casas; 2 já é estável o suficiente para não piscar.
+    formatRate(value) {
+        return value >= 10 ? value.toFixed(0) : value.toFixed(1);
+    }
 
-        // Badge e Custo
-        ui.elCount.innerText = bData.count;
-        ui.elCost.innerText = this.formatMoney(cost);
-        ui.btnBuy.disabled = currentMoney < cost;
-
-        // Velocidade Formatação
-        if (bData.count === 0) {
-            ui.elSpeed.innerText = "-- / ciclo";
-            ui.barFill.style.width = "0%";
-            ui.elStatus.innerText = "Parado (Compre para iniciar)";
-            ui.elStatus.style.color = "var(--text-secondary)";
-            return;
-        }
-
-        if (speed >= 1) {
-            ui.elSpeed.innerText = `${speed.toFixed(1)} / segundo`;
-        } else {
-            // Tempo para produzir 1 item
-            const timeForOne = (1 / speed).toFixed(1);
-            ui.elSpeed.innerText = `${timeForOne}s / ciclo`;
-        }
-
-        // Status
-        const isGenerator = id === 'woodcutter' || id === 'stoneMiner';
-
-        if (inputResourceCount > 0 || isGenerator) {
-            ui.elStatus.innerText = "Produzindo...";
-            ui.elStatus.style.color = "var(--accent-green)";
-        } else {
-            ui.elStatus.innerText = "Parado (Sem recursos)";
-            ui.elStatus.style.color = "var(--accent-danger)";
-        }
-
-        // Progresso Animado Visão Cliente
-        if (inputResourceCount === 0 && !isGenerator) {
-            const pct = Math.min((bData.progress * 100), 100);
-            ui.barFill.style.width = `${pct}%`;
-        } else if (speed >= 1) {
-            // Se processar 1 ou mais por segundo, a barra fica 100% cheia para não piscar enlouquecidamente
-            ui.barFill.style.width = "100%";
-        } else {
-            // Se menos, anima o progresso fracionado até 100%
-            const pct = Math.min((bData.progress * 100), 100);
-            ui.barFill.style.width = `${pct}%`;
-        }
-
-        // --- Storage Management Visível ---
-        // Apenas oculta o container ou limpa os botões dependendo da propriedade autoCollect
-        if (bData.autoCollect) {
-            // Se comprou Autocoleta, o Estoque some visualmente e automatiza
-            ui.elStorage.parentElement.classList.add('hidden');
-        } else {
-            ui.elStorage.parentElement.classList.remove('hidden');
-            ui.elStorage.innerText = Math.floor(bData.storedOutput);
-            
-            // Botão Coletar
-            ui.btnCollect.disabled = bData.storedOutput < 1;
-            
-            // Botão Upgrade Autocoleta dinâmico
-            ui.btnAuto.innerText = `⭐️ Autocoleta (R$ ${this.formatMoney(bData.autoCollectCost)})`;
-            ui.btnAuto.disabled = currentMoney < bData.autoCollectCost;
-        }
+    formatDuration(seconds) {
+        const h = Math.floor(seconds / 3600);
+        const m = Math.floor((seconds % 3600) / 60);
+        if (h > 0) return `${h}h ${m}min`;
+        if (m > 0) return `${m}min`;
+        return `${Math.floor(seconds)}s`;
     }
 
     showToast(message) {
@@ -460,48 +676,94 @@ class GameUI {
         toast.innerText = message;
         container.appendChild(toast);
 
-        // Remove do DOM após a animação
         setTimeout(() => {
-            if (container.contains(toast)) {
-                container.removeChild(toast);
-            }
+            if (container.contains(toast)) container.removeChild(toast);
         }, 3000);
     }
-    
-    renderStats() {
-        if (!this.statsContainer) return;
-        
-        const s = this.game.state;
-        const resources = [
-            { id: 'wood', name: 'Madeira', icon: '🪵' },
-            { id: 'board', name: 'Tábuas', icon: '🪚' },
-            { id: 'furniture', name: 'Móveis', icon: '🪑' },
-            { id: 'stone', name: 'Pedra', icon: '🪨' },
-            { id: 'stoneBlock', name: 'Blocos de Pedra', icon: '🧱' },
-            { id: 'constructionMat', name: 'Mat. Construção', icon: '🏗️' }
-        ];
+
+    showWelcomeBack(report) {
+        const entries = Object.keys(report.gained);
+        if (entries.length === 0 && report.moneyGained <= 0) return;
+
+        this.offlineTime.innerText = report.wasCapped
+            ? `Você ficou ${this.formatDuration(report.elapsed)} fora. O jogo simula no máximo 8h de produção.`
+            : `Você ficou ${this.formatDuration(report.elapsed)} fora.`;
 
         let html = '';
-        resources.forEach(res => {
-            const collected = s.stats.totalCollected[res.id] || 0;
-            const earned = s.stats.totalEarned[res.id] || 0;
-            
-            if (collected > 0) {
-                html += `
-                    <div class="stat-card" style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; border: 1px solid var(--panel-border);">
-                        <div style="font-size: 1.5rem; margin-bottom: 5px;">${res.icon}</div>
-                        <h4 style="margin: 0 0 10px 0; color: white;">${res.name}</h4>
-                        <div style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 3px;">
-                            Coletados: <strong style="color: white;">${Math.floor(collected)}</strong>
-                        </div>
-                        <div style="font-size: 0.8rem; color: var(--text-secondary);">
-                            Lucro: <strong style="color: var(--accent-green);">R$ ${this.formatMoney(earned)}</strong>
-                        </div>
+        for (const id of entries) {
+            const r = RESOURCES[id] || { short: id, icon: '📦' };
+            html += `
+                <div class="offline-gain-row">
+                    <span class="offline-gain-icon">${r.icon}</span>
+                    <span class="offline-gain-name">${r.short}</span>
+                    <span class="offline-gain-value">+${this.formatCount(report.gained[id])}</span>
+                </div>`;
+        }
+        if (report.moneyGained > 0) {
+            html += `
+                <div class="offline-gain-row">
+                    <span class="offline-gain-icon">💰</span>
+                    <span class="offline-gain-name">Venda automática</span>
+                    <span class="offline-gain-value">R$ ${this.formatMoney(report.moneyGained)}</span>
+                </div>`;
+        }
+
+        this.offlineGains.innerHTML = html;
+        this.modalOffline.classList.remove('hidden');
+    }
+
+    // ---------------------------------------------------------------- conquistas
+
+    renderAchievements() {
+        if (!this.achievementGrid) return;
+
+        const unlocked = this.game.state.achievements || {};
+        const total = ACHIEVEMENTS.length;
+        const got = Object.keys(unlocked).length;
+
+        this.achievementCount.innerText = `${got} / ${total}`;
+        this.achievementBonusInfo.innerText =
+            `Cada conquista dá +${(ACHIEVEMENT_BONUS * 100).toFixed(0)}% de velocidade em toda a produção. ` +
+            `Bônus atual: +${(this.game.getAchievementBonus() * 100).toFixed(0)}%.`;
+
+        this.achievementGrid.innerHTML = ACHIEVEMENTS.map(a => {
+            const at = unlocked[a.id];
+            return `
+                <div class="achievement-card ${at ? 'unlocked' : 'locked'}">
+                    <div class="achievement-icon">${a.icon}</div>
+                    <div class="achievement-info">
+                        <h4>${a.name}</h4>
+                        <p>${a.desc}</p>
+                        <span class="achievement-date">${at ? new Date(at).toLocaleDateString('pt-BR') : 'Bloqueada'}</span>
                     </div>
-                `;
-            }
-        });
-        
-        this.statsContainer.innerHTML = html;
+                </div>`;
+        }).join('');
+    }
+
+    renderStats(force) {
+        if (!this.statsContainer) return;
+        const s = this.game.state;
+
+        // Reconstruir os cards a cada frame é desperdício; só refaz quando os
+        // números mudaram de verdade.
+        const sig = this.game.getStatsSignature();
+        if (!force && sig === this.lastStatsSignature) return;
+        this.lastStatsSignature = sig;
+
+        this.statsContainer.innerHTML = Object.keys(RESOURCES).map(id => {
+            const r = RESOURCES[id];
+            const collected = Math.floor(s.stats.totalCollected[id] || 0);
+            const earned = s.stats.totalEarned[id] || 0;
+            if (collected === 0) return '';
+            if (!this.game.isResourceUnlocked(id)) return '';
+
+            return `
+                <div class="stat-card" style="--chain: ${GROUPS[r.group].color}">
+                    <div class="stat-card-icon">${r.icon}</div>
+                    <h4>${r.short}</h4>
+                    <div class="stat-card-row">Coletados: <strong>${this.formatCount(collected)}</strong></div>
+                    <div class="stat-card-row">Lucro: <strong class="green">R$ ${this.formatMoney(earned)}</strong></div>
+                </div>`;
+        }).join('');
     }
 }

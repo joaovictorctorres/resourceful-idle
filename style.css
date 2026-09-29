@@ -1,18 +1,40 @@
+/* ==========================================================================
+   Resourceful Idle — glassmorphism escuro
+   Acento por cadeia vem de --chain, setada pelo render a partir de GROUPS.
+   Um grupo novo custa zero CSS: uma linha em data.js.
+   ========================================================================== */
+
 :root {
     --bg-color: #0d1117;
     --panel-bg: rgba(22, 27, 34, 0.7);
     --panel-border: rgba(255, 255, 255, 0.1);
+    --panel-raised: rgba(255, 255, 255, 0.04);
+
     --text-primary: #c9d1d9;
     --text-secondary: #8b949e;
+    --text-muted: #6e7681;
+
     --accent-blue: #58a6ff;
     --accent-green: #2ea043;
     --accent-green-hover: #3fb950;
     --accent-gold: #e3b341;
     --accent-danger: #f85149;
+
     --btn-bg: #21262d;
     --btn-hover: #30363d;
     --font-main: 'Inter', sans-serif;
     --glass-blur: blur(12px);
+
+    /* fallback quando o card não tem cadeia */
+    --chain: var(--accent-blue);
+
+    /* escala tipográfica */
+    --fs-xs: 0.72rem;
+    --fs-sm: 0.85rem;
+    --fs-base: 1rem;
+    --fs-lg: 1.15rem;
+    --fs-xl: 1.5rem;
+    --fs-2xl: 2rem;
 }
 
 * {
@@ -23,13 +45,14 @@
 
 body {
     background-color: var(--bg-color);
-    background-image: radial-gradient(circle at top right, rgba(88, 166, 255, 0.1), transparent 40%),
-                      radial-gradient(circle at bottom left, rgba(46, 160, 67, 0.1), transparent 40%);
+    background-image:
+        radial-gradient(circle at top right, rgba(88, 166, 255, 0.1), transparent 40%),
+        radial-gradient(circle at bottom left, rgba(46, 160, 67, 0.1), transparent 40%);
     background-attachment: fixed;
     color: var(--text-primary);
     font-family: var(--font-main);
     line-height: 1.5;
-    padding: 20px;
+    padding: 16px;
     min-height: 100vh;
 }
 
@@ -38,86 +61,258 @@ body {
     margin: 0 auto;
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: 16px;
 }
 
-/* Glassmorphism */
 .glass-panel {
     background: var(--panel-bg);
     backdrop-filter: var(--glass-blur);
     -webkit-backdrop-filter: var(--glass-blur);
     border: 1px solid var(--panel-border);
     border-radius: 16px;
-    padding: 24px;
+    padding: 20px;
     box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
 }
 
-/* Header */
-header {
+.hidden {
+    display: none !important;
+}
+
+button {
+    font-family: var(--font-main);
+}
+
+/* Números que mudam 60x por segundo não podem dançar de largura. */
+.money-display,
+.resource-bar,
+.building-card,
+.stat-card {
+    font-variant-numeric: tabular-nums;
+}
+
+/* ==========================================================================
+   HEADER
+   ========================================================================== */
+
+.app-header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: var(--panel-bg);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--panel-border);
+    border-radius: 16px;
+    padding: 14px 18px;
     display: flex;
-    justify-content: center;
+    flex-direction: column;
+    gap: 12px;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
 }
 
 .header-content {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    width: 100%;
+    gap: 12px;
 }
 
 .header-content h1 {
-    font-size: 1.5rem;
+    font-size: var(--fs-lg);
     font-weight: 700;
+    white-space: nowrap;
     background: linear-gradient(90deg, #58a6ff, #e3b341);
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
 }
 
+.header-controls {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
 .money-display {
-    font-size: 2rem;
+    font-size: var(--fs-xl);
     font-weight: 700;
     color: var(--accent-green);
     display: flex;
     align-items: center;
-    gap: 5px;
+    gap: 4px;
 }
 
 .currency {
-    font-size: 1.2rem;
+    font-size: var(--fs-base);
     color: var(--text-secondary);
 }
 
-/* Grid Layout */
-.grid-layout {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    grid-template-rows: auto auto;
-    gap: 20px;
+.btn-icon {
+    background: none;
+    border: none;
+    font-size: 1.4rem;
+    cursor: pointer;
+    filter: grayscale(0.5);
+    transition: filter 0.2s;
+    line-height: 1;
+    padding: 4px;
 }
 
-@media (max-width: 768px) {
-    .grid-layout {
-        grid-template-columns: 1fr;
-    }
+.btn-icon:hover {
+    filter: grayscale(0);
 }
 
-h2 {
-    font-size: 1.2rem;
-    margin-bottom: 20px;
-    padding-bottom: 10px;
-    border-bottom: 1px solid var(--panel-border);
+/* ==========================================================================
+   BARRA DE RECURSOS — o que o jogador olha o tempo todo
+   Tira rolável em vez de grade: o número de recursos cresce com as fases
+   (6 agora, 15 depois da metalurgia) e uma grade empurraria a informação
+   para fora de vista.
+   ========================================================================== */
+
+.resource-bar {
+    display: flex;
+    gap: 6px;
+    align-items: stretch;
+    overflow-x: auto;
+    scrollbar-width: thin;
+    padding-bottom: 2px;
+}
+
+.res-chip {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    background: var(--panel-raised);
+    border: 1px solid var(--panel-border);
+    border-left: 3px solid var(--chain);
+    border-radius: 10px;
+    padding: 5px 9px;
+    /* encolhe até um piso, e não cresce: a barra rola o excedente */
+    flex: 1 1 150px;
+    min-width: 138px;
+}
+
+.res-chip-icon {
+    font-size: 1.3rem;
+    line-height: 1;
+}
+
+.res-chip-body {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.25;
+    flex-grow: 1;
+    /* min-width:0 num flex child sem isso impede o shrink, e o chip estoura o
+       container em vez de encolher. */
+    min-width: 0;
+}
+
+.res-chip-name {
+    font-size: var(--fs-xs);
+    color: var(--text-secondary);
+    white-space: nowrap;
+}
+
+.res-chip-count {
+    font-size: var(--fs-base);
+    font-weight: 700;
     color: #fff;
+    white-space: nowrap;
 }
 
-/* Botões */
+.res-chip-rate {
+    font-size: var(--fs-xs);
+    color: var(--chain);
+    font-weight: 600;
+    min-height: 1em;
+}
+
+.res-chip.no-rate .res-chip-rate {
+    color: transparent;
+}
+
+.res-chip-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    align-items: stretch;
+}
+
+.res-sell-all {
+    flex: 0 0 auto;
+    align-self: center;
+    white-space: nowrap;
+    padding: 6px 12px;
+}
+
+/* ==========================================================================
+   AÇÕES MANUAIS
+   ========================================================================== */
+
+.action-bar {
+    display: flex;
+    gap: 10px;
+}
+
+.action-bar .btn {
+    flex: 1;
+}
+
+.click-effect:active {
+    transform: scale(0.98);
+}
+
+/* ==========================================================================
+   ABAS
+   ========================================================================== */
+
+.tab-bar {
+    display: flex;
+    gap: 4px;
+    border-top: 1px solid var(--panel-border);
+    padding-top: 10px;
+}
+
+.tab {
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    padding: 7px 14px;
+    font-size: var(--fs-sm);
+    font-weight: 600;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+}
+
+.tab:hover {
+    color: var(--text-primary);
+    background: var(--panel-raised);
+}
+
+.tab[aria-selected="true"] {
+    color: #fff;
+    background: rgba(88, 166, 255, 0.15);
+    border-color: rgba(88, 166, 255, 0.4);
+}
+
+.panels {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+/* ==========================================================================
+   BOTÕES
+   ========================================================================== */
+
 .btn {
     background: var(--btn-bg);
     color: var(--text-primary);
     border: 1px solid var(--panel-border);
     border-radius: 8px;
     padding: 8px 16px;
-    font-family: var(--font-main);
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s ease;
@@ -125,6 +320,7 @@ h2 {
     align-items: center;
     justify-content: center;
     gap: 8px;
+    font-size: var(--fs-sm);
 }
 
 .btn:hover:not(:disabled) {
@@ -133,7 +329,7 @@ h2 {
 }
 
 .btn:disabled {
-    opacity: 0.5;
+    opacity: 0.45;
     cursor: not-allowed;
     filter: grayscale(100%);
 }
@@ -143,6 +339,7 @@ h2 {
     color: #fff;
     border: none;
 }
+
 .btn-primary:hover:not(:disabled) {
     background: #408bf9;
 }
@@ -152,29 +349,31 @@ h2 {
     border: 1px solid var(--accent-blue);
     color: var(--accent-blue);
 }
+
 .btn-secondary:hover:not(:disabled) {
     background: rgba(88, 166, 255, 0.1);
 }
 
 .btn-sell {
-    font-size: 0.85rem;
-    padding: 6px 12px;
+    font-size: var(--fs-xs);
+    padding: 3px 8px;
 }
 
 .btn-large {
-    padding: 16px 24px;
-    font-size: 1.1rem;
-    width: 100%;
+    padding: 12px 20px;
+    font-size: var(--fs-base);
 }
 
 .btn-buy {
-    background: var(--accent-green);
-    color: white;
+    background: var(--chain);
+    color: #000;
     border: none;
     width: 100%;
+    font-weight: 700;
 }
+
 .btn-buy:hover:not(:disabled) {
-    background: var(--accent-green-hover);
+    filter: brightness(1.15);
 }
 
 .btn-upgrade {
@@ -182,203 +381,269 @@ h2 {
     color: #000;
     border: none;
 }
+
 .btn-upgrade:hover:not(:disabled) {
     background: #d4a73c;
 }
 
-/* Listas */
-.resource-list {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
+.btn-small {
+    padding: 4px 8px;
+    font-size: var(--fs-xs);
 }
 
-.resource-item {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    background: rgba(255, 255, 255, 0.03);
-    padding: 12px;
-    border-radius: 8px;
-    border: 1px solid rgba(255, 255, 255, 0.05);
+.btn-auto {
+    background: #4f46e5;
+    color: white;
 }
 
-.resource-info {
-    display: flex;
-    flex-direction: column;
-    flex-grow: 1;
-    margin-left: 12px;
-}
+/* ==========================================================================
+   CADEIAS DE PRODUÇÃO
+   ========================================================================== */
 
-.resource-name {
-    font-size: 0.9rem;
-    color: var(--text-secondary);
-}
-
-.resource-count {
-    font-size: 1.2rem;
-    font-weight: 700;
-    color: #fff;
-}
-
-.action-container {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-
-/* Construções */
-.building-list {
-    display: flex;
-    flex-direction: column;
+.chain-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
     gap: 16px;
+    align-items: start;
+}
+
+.chain {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.chain-title {
+    font-size: var(--fs-xs);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--chain);
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--panel-border);
+}
+
+.chain-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
 }
 
 .building-card {
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    background: var(--panel-raised);
+    border: 1px solid var(--panel-border);
+    border-top: 2px solid var(--chain);
     border-radius: 12px;
-    padding: 16px;
+    padding: 12px;
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 10px;
 }
 
 .building-header {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
+    gap: 8px;
 }
 
 .building-header h3 {
-    font-size: 1.1rem;
+    font-size: var(--fs-base);
     color: #fff;
 }
 
 .building-desc {
-    font-size: 0.85rem;
+    font-size: var(--fs-xs);
     color: var(--text-secondary);
+    margin-top: 2px;
 }
 
 .badge {
     background: var(--btn-bg);
-    padding: 4px 10px;
+    padding: 2px 8px;
     border-radius: 12px;
     font-weight: 700;
-    font-size: 0.9rem;
-    color: var(--accent-blue);
+    font-size: var(--fs-sm);
+    color: var(--chain);
     border: 1px solid var(--panel-border);
+    flex-shrink: 0;
 }
 
-/* Barras de Progresso */
 .progress-container {
     display: flex;
     flex-direction: column;
-    gap: 6px;
-    margin: 8px 0;
+    gap: 5px;
 }
 
 .progress-info {
     display: flex;
     justify-content: space-between;
-    font-size: 0.8rem;
+    font-size: var(--fs-xs);
     color: var(--text-secondary);
+}
+
+.status-working {
+    color: var(--chain);
+}
+
+.status-idle {
+    color: var(--text-muted);
+}
+
+.status-blocked {
+    color: var(--accent-danger);
 }
 
 .progress-bar-bg {
     width: 100%;
-    height: 8px;
+    height: 6px;
     background: var(--btn-bg);
-    border-radius: 4px;
+    border-radius: 3px;
     overflow: hidden;
 }
 
 .progress-bar-fill {
     height: 100%;
-    background: var(--accent-blue);
+    background: var(--chain);
     width: 0%;
     transition: width 0.1s linear;
 }
 
-/* Upgrades */
-.hidden {
-    display: none !important;
+.storage-container {
+    padding: 8px 10px;
+    background: rgba(0, 0, 0, 0.25);
+    border-radius: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.storage-info {
+    font-size: var(--fs-xs);
+    color: var(--text-secondary);
+}
+
+.storage-info span {
+    color: #fff;
+    font-weight: 600;
+}
+
+.storage-actions {
+    display: flex;
+    gap: 5px;
+}
+
+/* ==========================================================================
+   UPGRADES
+   ========================================================================== */
+
+h2 {
+    font-size: var(--fs-lg);
+    margin-bottom: 16px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--panel-border);
+    color: #fff;
 }
 
 .upgrade-list {
     display: grid;
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     gap: 12px;
 }
 
 .upgrade-card {
     display: flex;
     align-items: center;
-    gap: 16px;
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    gap: 14px;
+    background: var(--panel-raised);
+    border: 1px solid var(--panel-border);
     border-radius: 12px;
     padding: 12px;
 }
 
 .upgrade-icon {
-    font-size: 2rem;
+    font-size: 1.8rem;
     background: var(--btn-bg);
-    padding: 12px;
+    padding: 10px;
     border-radius: 50%;
+    flex-shrink: 0;
 }
 
 .upgrade-info h4 {
     color: var(--accent-gold);
-    margin-bottom: 4px;
+    font-size: var(--fs-base);
+    margin-bottom: 2px;
 }
 
 .upgrade-info p {
-    font-size: 0.85rem;
+    font-size: var(--fs-xs);
     color: var(--text-secondary);
     margin-bottom: 8px;
 }
 
-/* Animations */
-.click-effect:active {
-    transform: scale(0.98);
+.upg-speed {
+    font-size: 0.8em;
+    color: var(--accent-green);
+    margin-left: 8px;
 }
 
-.toast {
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    background: var(--panel-bg);
+/* ==========================================================================
+   ESTATÍSTICAS
+   ========================================================================== */
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 12px;
+}
+
+.stat-card {
+    background: var(--panel-raised);
+    padding: 14px;
+    border-radius: 10px;
+    border: 1px solid var(--panel-border);
+    border-left: 3px solid var(--chain);
+}
+
+.stat-card-icon {
+    font-size: 1.4rem;
+    margin-bottom: 4px;
+}
+
+.stat-card h4 {
     color: #fff;
-    padding: 12px 24px;
-    border-radius: 8px;
-    border: 1px solid var(--accent-green);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-    animation: slideIn 0.3s ease forwards, fadeOut 0.3s ease 2.7s forwards;
-    z-index: 1000;
+    font-size: var(--fs-sm);
+    margin-bottom: 8px;
 }
 
-@keyframes slideIn {
-    from { transform: translateX(100%); opacity: 0; }
-    to { transform: translateX(0); opacity: 1; }
+.stat-card-row {
+    font-size: var(--fs-xs);
+    color: var(--text-secondary);
 }
 
-@keyframes fadeOut {
-    from { opacity: 1; }
-    to { opacity: 0; }
+.stat-card-row strong {
+    color: #fff;
 }
 
-/* Auto Sell UI */
+.stat-card-row strong.green {
+    color: var(--accent-green);
+}
+
+/* ==========================================================================
+   AUTO-SELL
+   ========================================================================== */
+
 .auto-sell-box {
     display: flex;
     align-items: center;
-    gap: 8px;
-    margin-right: 16px;
+    gap: 5px;
 }
 
 .btn-toggle-sell {
-    font-size: 0.7rem;
-    padding: 4px 8px;
+    font-size: 0.65rem;
+    padding: 2px 6px;
     border-radius: 4px;
     border: 1px solid var(--panel-border);
     background: var(--btn-bg);
@@ -394,94 +659,53 @@ h2 {
     color: var(--accent-green);
 }
 
-.sell-indicator-wrapper {
-    position: relative;
-    font-size: 1.2rem;
-    font-weight: 800;
-    display: inline-block;
-    width: 14px;
-    text-align: center;
+/* ==========================================================================
+   TOAST
+   ========================================================================== */
+
+.toast {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: var(--panel-bg);
+    backdrop-filter: var(--glass-blur);
+    color: #fff;
+    padding: 12px 20px;
+    border-radius: 8px;
+    border: 1px solid var(--accent-green);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    animation: slideIn 0.3s ease forwards, fadeOut 0.3s ease 2.7s forwards;
+    z-index: 1000;
+    max-width: calc(100vw - 40px);
 }
 
-.sell-icon-bg {
-    color: rgba(255, 255, 255, 0.1);
+@keyframes slideIn {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
 }
 
-.sell-icon-fill {
-    position: absolute;
-    top: 0;
-    left: 0;
-    color: var(--accent-green);
-    opacity: 0;
+@keyframes fadeOut {
+    from { opacity: 1; }
+    to { opacity: 0; }
 }
 
-/* STORAGE E Settings */
+/* ==========================================================================
+   MODAIS
+   100vw/100vh incluíam a barra de rolagem e geravam overflow horizontal no
+   celular — daí 100% e dvh.
+   ========================================================================== */
 
-.storage-container {
-    padding: 10px;
-    background: rgba(0,0,0,0.2);
-    border-top: 1px solid var(--panel-border);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.storage-info {
-    font-size: 0.8rem;
-    color: var(--text-secondary);
-}
-
-.storage-info span {
-    color: white;
-    font-weight: 600;
-}
-
-.storage-actions {
-    display: flex;
-    gap: 5px;
-}
-
-.btn-small {
-    padding: 4px 8px;
-    font-size: 0.75rem;
-}
-
-.btn-auto {
-    background: #4f46e5;
-    color: white;
-}
-
-.header-controls {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-}
-
-.btn-icon {
-    background: none;
-    border: none;
-    font-size: 1.5rem;
-    cursor: pointer;
-    filter: grayscale(0.5);
-    transition: filter 0.2s;
-}
-
-.btn-icon:hover {
-    filter: grayscale(0);
-}
-
-/* Modal */
 .modal {
     position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    background: rgba(0,0,0,0.6);
+    inset: 0;
+    width: 100%;
+    height: 100dvh;
+    background: rgba(0, 0, 0, 0.65);
     display: flex;
     justify-content: center;
     align-items: center;
     z-index: 1000;
+    padding: 16px;
 }
 
 .modal.hidden {
@@ -490,76 +714,484 @@ h2 {
 
 .modal-content {
     background: var(--bg-color);
+    border: 1px solid var(--panel-border);
+    border-radius: 16px;
     padding: 20px;
     width: 400px;
-    max-width: 90%;
+    max-width: 100%;
+    max-height: calc(100dvh - 32px);
+    display: flex;
+    flex-direction: column;
+}
+
+#achievements-modal .modal-content {
+    width: 640px;
+}
+
+#offline-modal .modal-content {
+    width: 420px;
 }
 
 .modal-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 20px;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.modal-body {
+    overflow-y: auto;
 }
 
 .setting-item {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background: rgba(255,255,255,0.05);
-    padding: 15px;
+    background: var(--panel-raised);
+    padding: 14px;
     border-radius: 8px;
+    gap: 12px;
 }
 
 .setting-desc {
-    font-size: 0.8rem;
+    font-size: var(--fs-sm);
     color: var(--text-secondary);
-    margin-top: 5px;
+    margin-top: 4px;
 }
 
-/* Switch UI */
+/* Switch */
 .switch {
-  position: relative;
-  display: inline-block;
-  width: 50px;
-  height: 24px;
+    position: relative;
+    display: inline-block;
+    width: 50px;
+    height: 24px;
+    flex-shrink: 0;
 }
 
-.switch input { 
-  opacity: 0;
-  width: 0;
-  height: 0;
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
 }
 
 .slider {
-  position: absolute;
-  cursor: pointer;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: #4b5563;
-  transition: .4s;
-  border-radius: 24px;
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #4b5563;
+    transition: .4s;
+    border-radius: 24px;
 }
 
 .slider:before {
-  position: absolute;
-  content: "";
-  height: 16px;
-  width: 16px;
-  left: 4px;
-  bottom: 4px;
-  background-color: white;
-  transition: .4s;
-  border-radius: 50%;
+    position: absolute;
+    content: "";
+    height: 16px;
+    width: 16px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
 }
 
 input:checked + .slider {
-  background-color: var(--accent-green);
+    background-color: var(--accent-green);
 }
 
 input:checked + .slider:before {
-  transform: translateX(26px);
+    transform: translateX(26px);
 }
 
+/* Offline */
+.offline-gains {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.offline-gain-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--panel-raised);
+    padding: 10px 12px;
+    border-radius: 8px;
+}
+
+.offline-gain-icon {
+    font-size: 1.2rem;
+}
+
+.offline-gain-name {
+    flex-grow: 1;
+    font-size: var(--fs-sm);
+}
+
+.offline-gain-value {
+    font-weight: 700;
+    color: var(--accent-green);
+    font-variant-numeric: tabular-nums;
+}
+
+/* Conquistas */
+.achievement-count {
+    font-size: var(--fs-sm);
+    font-weight: 400;
+    color: var(--text-secondary);
+    margin-left: 8px;
+}
+
+.achievement-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 10px;
+}
+
+.achievement-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--panel-raised);
+    border: 1px solid var(--panel-border);
+    border-radius: 12px;
+    padding: 12px;
+}
+
+.achievement-card.locked {
+    opacity: 0.45;
+    filter: grayscale(1);
+}
+
+.achievement-card.unlocked {
+    border-color: var(--accent-gold);
+    background: rgba(227, 179, 65, 0.08);
+}
+
+.achievement-icon {
+    font-size: 1.6rem;
+    flex-shrink: 0;
+}
+
+.achievement-info h4 {
+    color: var(--accent-gold);
+    font-size: var(--fs-sm);
+    margin-bottom: 2px;
+}
+
+.achievement-info p {
+    font-size: var(--fs-xs);
+    color: var(--text-secondary);
+}
+
+.achievement-date {
+    font-size: 0.68rem;
+    color: var(--text-muted);
+}
+
+/* ==========================================================================
+   ÁRVORE DE PESQUISA
+   Nódulos em colunas por tier, conectados por curvas SVG. Os conectores são
+   SVG porque as arestas cruzam colunas numa topologia que não é grade — o
+   CSS puro exigiria position:absolute em cada nó e ainda assim não daria
+   as curvas.
+   ========================================================================== */
+
+.tree-hint {
+    margin-bottom: 14px;
+}
+
+.tree-layout {
+    display: grid;
+    grid-template-columns: 1fr 280px;
+    /* min-height:0 é obrigatório: sem ele um item de grid não aceita altura
+       menor que o conteúdo, e o .tree-wrap nunca cria caixa de rolagem. */
+    min-height: 0;
+    gap: 16px;
+    align-items: stretch;
+}
+
+.tree-wrap {
+    /* Rola nos dois eixos. A cadeia mais profunda tem 4 colunas e a coluna de
+       geradores tem 5 nós, então nenhuma cabe sem rolar. Usa `height` e não
+       `max-height` porque a grade filha cresce para o conteúdo, e um
+       max-height no pai com overflow:auto não dá caixa de rolagem confiável. */
+    overflow: auto;
+    height: 58vh;
+    min-height: 320px;
+    padding-bottom: 6px;
+    /* Barra visível: sem ela não há como saber que o grafo continua. */
+    scrollbar-color: var(--text-muted) transparent;
+    scrollbar-width: thin;
+}
+
+.tree {
+    position: relative;
+    display: grid;
+    /* Coluna = tier, dita por cada nó via --tier. Uma linha por nó; a grade
+       empilha os que compartilham tier. */
+    grid-template-columns: repeat(var(--cols, 3), 172px);
+    grid-auto-rows: 82px;
+    gap: 10px 30px;
+    align-content: start;
+    padding: 10px 4px;
+    min-width: min-content;
+}
+
+.tree-links {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    overflow: visible;
+}
+
+.tree-links path {
+    fill: none;
+    stroke: var(--panel-border);
+    stroke-width: 2;
+}
+
+.tree-node {
+    position: relative;
+    z-index: 1;
+    /* Coluna = tier. Rows ficam livres; o CSS de grade empilha na mesma coluna. */
+    grid-column: var(--tier, 1);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    background: var(--panel-raised);
+    border: 1px solid var(--panel-border);
+    border-radius: 10px;
+    cursor: pointer;
+    font-family: var(--font-main);
+    color: var(--text-secondary);
+    transition: transform 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+    min-height: 68px;
+    padding: 8px 6px;
+}
+
+.tree-node:hover {
+    transform: translateY(-2px);
+    border-color: var(--chain);
+}
+
+/* Destravado e ainda não construído: o que o jogador pode fazer agora. */
+.tree-node.available {
+    border-color: var(--chain);
+    color: var(--text-primary);
+    background: color-mix(in srgb, var(--chain) 10%, transparent);
+    animation: tree-pulse 2.4s ease-in-out infinite;
+}
+
+@keyframes tree-pulse {
+
+    0%,
+    100% {
+        box-shadow: 0 0 0 0 transparent;
+    }
+    50% {
+        box-shadow: 0 0 0 3px color-mix(in srgb, var(--chain) 22%, transparent);
+    }
+}
+
+.tree-node.owned {
+    background: color-mix(in srgb, var(--chain) 20%, transparent);
+    border-color: var(--chain);
+    color: #fff;
+}
+
+.tree-node.locked {
+    opacity: 0.32;
+    filter: grayscale(0.7);
+}
+
+.tree-node-icon {
+    font-size: 1.3rem;
+    line-height: 1;
+}
+
+.tree-node-name {
+    font-size: var(--fs-xs);
+    font-weight: 600;
+    text-align: center;
+    line-height: 1.2;
+}
+
+.tree-node-state {
+    font-size: 0.66rem;
+    opacity: 0.75;
+    min-height: 1em;
+}
+
+.tree-detail {
+    position: sticky;
+    top: 190px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 16px;
+}
+
+.tree-detail-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-bottom: 2px solid var(--chain);
+    padding-bottom: 10px;
+}
+
+.tree-detail-icon {
+    font-size: 1.6rem;
+}
+
+.tree-detail-head h4 {
+    color: #fff;
+    font-size: var(--fs-base);
+    line-height: 1.2;
+}
+
+.tree-detail-group {
+    font-size: var(--fs-xs);
+    color: var(--chain);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.tree-detail-desc {
+    font-size: var(--fs-xs);
+    color: var(--text-secondary);
+}
+
+.tree-detail-line {
+    font-size: var(--fs-sm);
+    color: var(--text-primary);
+    background: rgba(0, 0, 0, 0.25);
+    padding: 8px 10px;
+    border-radius: 8px;
+}
+
+.tree-detail-stats {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: var(--fs-xs);
+    color: var(--text-secondary);
+}
+
+.tree-detail-stats strong {
+    color: var(--accent-green);
+}
+
+.tree-detail-status {
+    font-size: var(--fs-xs);
+    color: var(--text-muted);
+    font-style: italic;
+}
+
+/* ==========================================================================
+   MOBILE
+   ========================================================================== */
+
+@media (max-width: 768px) {
+    body {
+        padding: 10px;
+    }
+
+    .app-container {
+        gap: 12px;
+    }
+
+    .app-header {
+        padding: 10px 12px;
+        gap: 10px;
+    }
+
+    /* No celular o título cede espaço ao saldo: "R$ 250.000.00" era o que
+       estourava a linha, não o título. */
+    .header-content h1 {
+        font-size: var(--fs-base);
+        white-space: normal;
+    }
+
+    .header-controls {
+        gap: 8px;
+        min-width: 0;
+    }
+
+    .money-display {
+        font-size: var(--fs-lg);
+        white-space: nowrap;
+    }
+
+    /* No celular a barra vira tira rolável em vez de 15 linhas empilhadas,
+       que empurrariam metade da tela para fora de vista. */
+    .resource-bar {
+        gap: 5px;
+    }
+
+    .res-chip {
+        flex: 0 0 auto;
+        min-width: 132px;
+        padding: 5px 8px;
+    }
+
+    .res-sell-all {
+        flex: 0 0 auto;
+        align-self: stretch;
+    }
+
+    .action-bar {
+        flex-direction: column;
+    }
+
+    .action-bar .btn {
+        padding: 10px 16px;
+    }
+
+    .tab-bar {
+        overflow-x: auto;
+        scrollbar-width: none;
+    }
+
+    .tab-bar::-webkit-scrollbar {
+        display: none;
+    }
+
+    .chain-list,
+    .upgrade-list {
+        grid-template-columns: 1fr;
+    }
+
+    /* No celular o detalhe vai para baixo do grafo: uma coluna de 280px ao lado
+       espremeria os nós até ficarem ilegíveis. */
+    .tree-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .tree {
+        grid-auto-columns: 150px;
+        gap: 36px 22px;
+    }
+
+    .tree-detail {
+        position: static;
+    }
+
+    .glass-panel {
+        padding: 14px;
+    }
+
+    .toast {
+        left: 12px;
+        right: 12px;
+        bottom: 12px;
+        max-width: none;
+    }
+}
