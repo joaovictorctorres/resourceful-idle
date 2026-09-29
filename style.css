@@ -894,6 +894,208 @@ input:checked + .slider:before {
 }
 
 /* ==========================================================================
+   ÁRVORE DE PESQUISA
+   Nódulos em colunas por tier, conectados por curvas SVG. Os conectores são
+   SVG porque as arestas cruzam colunas numa topologia que não é grade — o
+   CSS puro exigiria position:absolute em cada nó e ainda assim não daria
+   as curvas.
+   ========================================================================== */
+
+.tree-hint {
+    margin-bottom: 14px;
+}
+
+.tree-layout {
+    display: grid;
+    grid-template-columns: 1fr 280px;
+    /* min-height:0 é obrigatório: sem ele um item de grid não aceita altura
+       menor que o conteúdo, e o .tree-wrap nunca cria caixa de rolagem. */
+    min-height: 0;
+    gap: 16px;
+    align-items: stretch;
+}
+
+.tree-wrap {
+    /* Rola nos dois eixos. A cadeia mais profunda tem 4 colunas e a coluna de
+       geradores tem 5 nós, então nenhuma cabe sem rolar. Usa `height` e não
+       `max-height` porque a grade filha cresce para o conteúdo, e um
+       max-height no pai com overflow:auto não dá caixa de rolagem confiável. */
+    overflow: auto;
+    height: 58vh;
+    min-height: 320px;
+    padding-bottom: 6px;
+    /* Barra visível: sem ela não há como saber que o grafo continua. */
+    scrollbar-color: var(--text-muted) transparent;
+    scrollbar-width: thin;
+}
+
+.tree {
+    position: relative;
+    display: grid;
+    /* Coluna = tier, dita por cada nó via --tier. Uma linha por nó; a grade
+       empilha os que compartilham tier. */
+    grid-template-columns: repeat(var(--cols, 3), 172px);
+    grid-auto-rows: 82px;
+    gap: 10px 30px;
+    align-content: start;
+    padding: 10px 4px;
+    min-width: min-content;
+}
+
+.tree-links {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    overflow: visible;
+}
+
+.tree-links path {
+    fill: none;
+    stroke: var(--panel-border);
+    stroke-width: 2;
+}
+
+.tree-node {
+    position: relative;
+    z-index: 1;
+    /* Coluna = tier. Rows ficam livres; o CSS de grade empilha na mesma coluna. */
+    grid-column: var(--tier, 1);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    background: var(--panel-raised);
+    border: 1px solid var(--panel-border);
+    border-radius: 10px;
+    cursor: pointer;
+    font-family: var(--font-main);
+    color: var(--text-secondary);
+    transition: transform 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+    min-height: 68px;
+    padding: 8px 6px;
+}
+
+.tree-node:hover {
+    transform: translateY(-2px);
+    border-color: var(--chain);
+}
+
+/* Destravado e ainda não construído: o que o jogador pode fazer agora. */
+.tree-node.available {
+    border-color: var(--chain);
+    color: var(--text-primary);
+    background: color-mix(in srgb, var(--chain) 10%, transparent);
+    animation: tree-pulse 2.4s ease-in-out infinite;
+}
+
+@keyframes tree-pulse {
+
+    0%,
+    100% {
+        box-shadow: 0 0 0 0 transparent;
+    }
+    50% {
+        box-shadow: 0 0 0 3px color-mix(in srgb, var(--chain) 22%, transparent);
+    }
+}
+
+.tree-node.owned {
+    background: color-mix(in srgb, var(--chain) 20%, transparent);
+    border-color: var(--chain);
+    color: #fff;
+}
+
+.tree-node.locked {
+    opacity: 0.32;
+    filter: grayscale(0.7);
+}
+
+.tree-node-icon {
+    font-size: 1.3rem;
+    line-height: 1;
+}
+
+.tree-node-name {
+    font-size: var(--fs-xs);
+    font-weight: 600;
+    text-align: center;
+    line-height: 1.2;
+}
+
+.tree-node-state {
+    font-size: 0.66rem;
+    opacity: 0.75;
+    min-height: 1em;
+}
+
+.tree-detail {
+    position: sticky;
+    top: 190px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 16px;
+}
+
+.tree-detail-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-bottom: 2px solid var(--chain);
+    padding-bottom: 10px;
+}
+
+.tree-detail-icon {
+    font-size: 1.6rem;
+}
+
+.tree-detail-head h4 {
+    color: #fff;
+    font-size: var(--fs-base);
+    line-height: 1.2;
+}
+
+.tree-detail-group {
+    font-size: var(--fs-xs);
+    color: var(--chain);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.tree-detail-desc {
+    font-size: var(--fs-xs);
+    color: var(--text-secondary);
+}
+
+.tree-detail-line {
+    font-size: var(--fs-sm);
+    color: var(--text-primary);
+    background: rgba(0, 0, 0, 0.25);
+    padding: 8px 10px;
+    border-radius: 8px;
+}
+
+.tree-detail-stats {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: var(--fs-xs);
+    color: var(--text-secondary);
+}
+
+.tree-detail-stats strong {
+    color: var(--accent-green);
+}
+
+.tree-detail-status {
+    font-size: var(--fs-xs);
+    color: var(--text-muted);
+    font-style: italic;
+}
+
+/* ==========================================================================
    MOBILE
    ========================================================================== */
 
@@ -965,6 +1167,21 @@ input:checked + .slider:before {
     .chain-list,
     .upgrade-list {
         grid-template-columns: 1fr;
+    }
+
+    /* No celular o detalhe vai para baixo do grafo: uma coluna de 280px ao lado
+       espremeria os nós até ficarem ilegíveis. */
+    .tree-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .tree {
+        grid-auto-columns: 150px;
+        gap: 36px 22px;
+    }
+
+    .tree-detail {
+        position: static;
     }
 
     .glass-panel {

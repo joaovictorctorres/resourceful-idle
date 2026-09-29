@@ -61,7 +61,7 @@ const URL = 'http://localhost:8899/index.html';
         (await page.$$('.res-chip')).length === 15, `${(await page.$$('.res-chip')).length}`);
     ok('15 cards desenhados, ocultos por unlock',
         (await page.$$('.building-card')).length === 15, `${(await page.$$('.building-card')).length}`);
-    ok('3 abas', (await page.$$('[data-tab]')).length === 3);
+    ok('4 abas', (await page.$$('[data-tab]')).length === 4);
     ok('Vender Tudo na barra', (await page.$('.res-sell-all')) !== null);
     ok('aba de Melhorias escondida no início',
         await page.$eval('[data-tab="melhorias"]', el => el.classList.contains('hidden')));
@@ -206,7 +206,93 @@ const URL = 'http://localhost:8899/index.html';
     const oreAfter = await page.evaluate(() => window.gameRef.state.inventory.ironOre);
     ok('botão de minério de ferro coleta', oreAfter > oreBefore, `${oreBefore} -> ${oreAfter}`);
 
-    // 12. Sem overflow horizontal com 15 chips (o bug do 100vw)
+    // 14. Árvore de pesquisa
+    await page.evaluate(() => document.querySelector('[data-tab="arvore"]').click());
+    await new Promise(r => setTimeout(r, 300));
+
+    ok('15 nós na árvore', (await page.$$('.tree-node')).length === 15,
+        `${(await page.$$('.tree-node')).length} nós`);
+    ok('conectores desenhados', await page.$eval('#tree-links path',
+        p => (p.getAttribute('d') || '').length > 0), 'path vazio');
+
+    // Topologia: o tier de um prédio é 1 + o tier mais profundo dos seus insumos.
+    // A Siderúrgica (ferro + carvão) tem que ficar acima das duas fundições.
+    const tiers = await page.$$eval('.tree-node', els => {
+        const t = {};
+        for (const e of els) t[e.dataset.node] = Number(e.dataset.tier);
+        return t;
+    });
+    ok('lenhador é tier 1', tiers.woodcutter === 1, `${tiers.woodcutter}`);
+    ok('refinaria acima do lenhador', tiers.refinery > tiers.woodcutter);
+    ok('siderurgica acima da fundicao e do poeco de carvao',
+        tiers.steelMill > tiers.ironSmelter && tiers.steelMill > tiers.coalMine,
+        `siderurgica=${tiers.steelMill} fundicao=${tiers.ironSmelter} carvao=${tiers.coalMine}`);
+    ok('liga de bronze acima das duas fundicoes',
+        tiers.bronzeWorks > tiers.copperSmelter && tiers.bronzeWorks > tiers.tinSmelter);
+
+    // Estados: comprado / disponível / bloqueado. A árvore mostra o caminho à
+    // frente, então bloqueado é esmaecido e não oculto. Neste ponto do teste o
+    // metalPanel já foi destravado e só o lenhador foi comprado.
+    ok('lenhador comprado está como owned',
+        await page.$eval('[data-node="woodcutter"]', el => el.classList.contains('owned')));
+    ok('refinaria destravada e não comprada = disponível',
+        await page.$eval('[data-node="refinery"]', el => el.classList.contains('available')));
+    ok('nós metalúrgicos visíveis mesmo já destravados',
+        await page.$eval('[data-node="steelMill"]', el => getComputedStyle(el).display !== 'none'));
+
+    // Estado bloqueado: numa partida nova, a metalurgia fica esmaecida mas
+    // visível — o jogador precisa ver que existe um caminho à frente.
+    // localStorage é compartilhado entre abas do mesmo browser, então limpar
+    // aqui apagaria o save da página principal. Usa contexto próprio.
+    const ctx = await browser.createBrowserContext();
+    const page2 = await ctx.newPage();
+    await page2.setViewport({ width: 1280, height: 900 });
+    await page2.goto(URL, { waitUntil: 'networkidle0' });
+    await page2.evaluate(() => document.querySelector('[data-tab="arvore"]').click());
+    await new Promise(r => setTimeout(r, 300));
+    ok('partida nova: metalPanel bloqueado',
+        await page2.evaluate(() => !window.gameRef.state.unlocks.metalPanel));
+    ok('siderurgica esmaecida quando bloqueada',
+        await page2.$eval('[data-node="steelMill"]', el => el.classList.contains('locked')));
+    ok('siderurgica visível quando bloqueada',
+        await page2.$eval('[data-node="steelMill"]', el => getComputedStyle(el).display !== 'none'));
+    await ctx.close();
+
+    // Clique mostra a receita, sem Buy-from-scratch: os dados vêm de BUILDINGS.
+    await page.click('[data-node="steelMill"]');
+    await new Promise(r => setTimeout(r, 200));
+    const detail = await page.$eval('#tree-detail', el => el.textContent);
+    ok('detalhe mostra a receita do aço',
+        detail.includes('Lingote de Ferro') && detail.includes('Carvão') && detail.includes('Aço'),
+        detail.slice(0, 90));
+    ok('detalhe mostra o custo', detail.includes('Próximo'), 'sem custo');
+
+    // A aba oculta tem largura zero, então voltar para a árvore tem que
+    // redesenhar os conectores — do contrário o path fica todo em x=0.
+    await page.evaluate(() => document.querySelector('[data-tab="stats"]').click());
+    await new Promise(r => setTimeout(r, 200));
+    await page.evaluate(() => document.querySelector('[data-tab="arvore"]').click());
+    await new Promise(r => setTimeout(r, 300));
+    const pathLen = await page.$eval('#tree-links path', p => (p.getAttribute('d') || '').length);
+    ok('conectores se redesenham ao voltar à aba', pathLen > 200, `d=${pathLen}`);
+
+    // A cadeia mais profunda tem 4 colunas e a de geradores 5 nós: nenhuma cabe
+    // sem rolar. O grafo precisa ter caixa de rolagem de verdade, senão o topo
+    // some atrás do header sticky.
+    const scroll = await page.$eval('.tree-wrap', el => ({
+        h: el.clientHeight, scrollH: el.scrollHeight, overflow: getComputedStyle(el).overflow
+    }));
+    ok('grafo tem caixa de rolagem', scroll.overflow === 'auto' && scroll.scrollH > scroll.h,
+        `${scroll.scrollH} de conteúdo em ${scroll.h}px, overflow=${scroll.overflow}`);
+    ok('rolagem funciona de fato', await page.$eval('.tree-wrap', el => {
+        const antes = el.scrollTop;
+        el.scrollTop = 120;
+        const depois = el.scrollTop;
+        el.scrollTop = antes;
+        return depois > 0;
+    }));
+
+    // 15. Sem overflow horizontal com 15 chips (o bug do 100vw)
     await page.click('[data-tab="producao"]');
     await new Promise(r => setTimeout(r, 200));
     const overflow = await page.evaluate(() =>

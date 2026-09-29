@@ -34,6 +34,7 @@
             <nav class="tab-bar" role="tablist">
                 <button class="tab" data-tab="producao" aria-selected="true">🏭 Produção</button>
                 <button class="tab" data-tab="melhorias" aria-selected="false">✨ Melhorias</button>
+                <button class="tab" data-tab="arvore" aria-selected="false">🌳 Árvore</button>
                 <button class="tab" data-tab="stats" aria-selected="false">📊 Estatísticas</button>
             </nav>
         </header>
@@ -169,6 +170,24 @@
                         </div>
                     </div>
 
+                </div>
+            </section>
+
+            <!-- ABA: ÁRVORE DE PESQUISA -->
+            <section class="glass-panel hidden" data-panel="arvore">
+                <h2>🌳 Árvore de Pesquisa</h2>
+                <p class="setting-desc tree-hint">
+                    Clique num nó para ver a receita. O que está cinza ainda não foi destravado.
+                </p>
+                <div class="tree-layout">
+                    <div class="tree-wrap">
+                        <div class="tree" id="tech-tree">
+                            <svg class="tree-links" id="tree-links" aria-hidden="true"></svg>
+                        </div>
+                    </div>
+                    <aside class="tree-detail glass-panel" id="tree-detail">
+                        <p class="setting-desc">Selecione um nó da árvore.</p>
+                    </aside>
                 </div>
             </section>
 

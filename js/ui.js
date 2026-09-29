@@ -28,6 +28,13 @@ class GameUI {
         this.chainList = document.getElementById('chain-list');
         this.statsContainer = document.getElementById('stats-container');
 
+        // Árvore de pesquisa
+        this.techTree = document.getElementById('tech-tree');
+        this.treeSvg = document.getElementById('tree-links');
+        this.treeDetail = document.getElementById('tree-detail');
+        this.treeNodes = {};
+        this.treeProducers = () => [];
+
         // Preços são estáticos: escritos uma vez no render, não por frame.
         for (const id in this.res) this.res[id].price.innerText = this.formatMoney(RESOURCES[id].price);
 
@@ -62,6 +69,7 @@ class GameUI {
         this.renderResources();
         this.renderActions();
         this.renderChains();
+        this.renderTree();
     }
 
     renderResources() {
@@ -253,6 +261,13 @@ class GameUI {
             this.updateUI();
         });
 
+        // Nós da árvore: clique mostra a receita. Delegado porque os nós são
+        // gerados.
+        this.techTree.addEventListener('click', (e) => {
+            const node = e.target.closest('[data-node]');
+            if (node) this.showTreeNode(node.dataset.node);
+        });
+
         // Coleta manual precisa de mousedown/touchstart, não de click — e precisa
         // da referência do elemento para o feedback visual do scale.
         for (const id in this.acts) {
@@ -329,6 +344,7 @@ class GameUI {
         // updateUI() e o painel exibido nasce certo.
         if (this.tab === 'producao') this.updateProduction();
         if (this.tab === 'melhorias') this.updateUpgrades();
+        if (this.tab === 'arvore') this.updateTree();
         if (this.tab === 'stats') this.renderStats(force);
     }
 
@@ -466,6 +482,168 @@ class GameUI {
         const c = this.game.getContinuousClickCost(`${key}Level`);
         cost.innerText = this.formatMoney(c);
         btn.disabled = s.money < c;
+    }
+
+    // ------------------------------------------------------- árvore de pesquisa
+    //
+    // Lê exclusivamente de BUILDINGS — nenhuma receita duplicada aqui. A
+    // topologia (tier, predecessores) é derivada do próprio grafo de produção:
+    // um prédio está num tier acima do mais profundo dos seus insumos.
+
+    buildTreeModel() {
+        // Produtores de um recurso, para desenhar as arestas e resolver os tiers.
+        const producers = {};
+        for (const id in BUILDINGS) {
+            const out = BUILDINGS[id].output;
+            (producers[out] = producers[out] || []).push(id);
+        }
+        this.treeProducers = (r) => producers[r] || [];
+
+        // Tier = profundidade na cadeia: 1 + o tier mais profundo dos produtos
+        // que o alimentam. Precisa de memoização recursiva, não de um for na
+        // ordem de declaração — a ordem dos dados não é topológica (a Siderúrgica
+        // vem antes das Fundições), e um simples `tiers[p.id] ?? 0` resolveria
+        // todo mundo como tier 1.
+        const tiers = {};
+        const tierOf = (id, seen = new Set()) => {
+            if (tiers[id] !== undefined) return tiers[id];
+            // Um ciclo no grafo travaria a recursão; o assert de aciclicidade
+            // cobre isso, e o fallback mantém a UI de pé se um dia acontecer.
+            if (seen.has(id)) return 1;
+            seen.add(id);
+
+            const ins = BUILDINGS[id].inputs;
+            const parentTier = ins.length === 0
+                ? 0
+                : Math.max(...ins.map(i => Math.max(0, ...this.treeProducers(i.id).map(p => tierOf(p, seen)))));
+
+            tiers[id] = parentTier + 1;
+            return tiers[id];
+        };
+
+        for (const id in BUILDINGS) tierOf(id);
+
+        return { tiers, producers };
+    }
+
+    renderTree() {
+        const { tiers } = this.buildTreeModel();
+
+        // Só os nós são reescritos: o <svg> de conectores é filho de
+        // #tech-tree, e innerHTML no container inteiro o apagaria.
+        const nodes = Object.keys(BUILDINGS).map(id => {
+            const b = BUILDINGS[id];
+            return `
+                <button class="tree-node" data-node="${id}" data-tier="${tiers[id]}"
+                        style="--chain: ${GROUPS[b.group].color}">
+                    <span class="tree-node-icon">${b.icon}</span>
+                    <span class="tree-node-name">${b.name}</span>
+                    <span class="tree-node-state" data-state></span>
+                </button>
+            `;
+        }).join('');
+
+        this.techTree.insertAdjacentHTML('afterbegin', nodes);
+
+        // Colunas por tier: CSS não lê atributo, então o tier vai como custom
+        // property lida pelo stylesheet (--tier no nó, --cols no container).
+        const maxTier = Math.max(...Object.values(tiers));
+        this.techTree.style.setProperty('--cols', maxTier);
+        for (const el of this.techTree.querySelectorAll('[data-node]')) {
+            el.style.setProperty('--tier', el.dataset.tier);
+            this.treeNodes[el.dataset.node] = el;
+        }
+    }
+
+    updateTree() {
+        const s = this.game.state;
+        const { producers } = this.buildTreeModel();
+
+        for (const id in this.treeNodes) {
+            const el = this.treeNodes[id];
+            const unlocked = this.game.isBuildingUnlocked(id);
+            const count = s.buildings[id].count;
+
+            // Três estados: comprado, disponível, bloqueado. A árvore mostra o
+            // caminho à frente, então bloqueado é esmaecido e não oculto.
+            el.classList.toggle('owned', count > 0);
+            el.classList.toggle('available', unlocked && count === 0);
+            el.classList.toggle('locked', !unlocked);
+            el.querySelector('[data-state]').innerText =
+                count > 0 ? `${count}` : (unlocked ? 'disponível' : '');
+        }
+
+        this.drawTreeLinks(producers);
+    }
+
+    // Conectores em SVG: um único <path> com todos os segmentos, em vez de um
+    // elemento por aresta. Precisa de SVG porque as arestas cruzam colunas e a
+    // topologia não é uma grade — o CSS puro não resolve isso sem position:absolute
+    // em cada nó.
+    drawTreeLinks(producers) {
+        const rect = this.techTree.getBoundingClientRect();
+        if (rect.width === 0) return;
+
+        let d = '';
+        for (const id in BUILDINGS) {
+            const from = this.treeNodes[id].getBoundingClientRect();
+            for (const input of BUILDINGS[id].inputs) {
+                for (const p of producers[input.id] || []) {
+                    const to = this.treeNodes[p].getBoundingClientRect();
+                    // Sai pela direita do produtor, entra pela esquerda do
+                    // consumidor: as colunas são tiers crescentes.
+                    const x1 = from.right - rect.left;
+                    const y1 = from.top + from.height / 2 - rect.top;
+                    const x2 = to.left - rect.left;
+                    const y2 = to.top + to.height / 2 - rect.top;
+                    const mid = (x1 + x2) / 2;
+                    d += `M${x1},${y1} C${mid},${y1} ${mid},${y2} ${x2},${y2} `;
+                }
+            }
+        }
+        // innerHTML em <svg> não cria elementos no namespace SVG nos navegadores
+        // (vira HTML desconhecido e não renderiza). Um único <path> com todos os
+        // segmentos, construído via createElementNS.
+        const old = this.treeSvg.querySelector('path');
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.setAttribute('d', d);
+        if (old) this.treeSvg.replaceChild(path, old);
+        else this.treeSvg.appendChild(path);
+    }
+
+    showTreeNode(id) {
+        const b = BUILDINGS[id];
+        const s = this.game.state;
+        const count = s.buildings[id].count;
+        const speed = this.game.getBuildingSpeed(id);
+
+        const inputs = b.inputs.length === 0
+            ? `<p class="tree-detail-line">Gerador — não consome insumo.</p>`
+            : `<p class="tree-detail-line">${b.inputs
+                .map(i => `${i.qty}× ${RESOURCES[i.id].name}`)
+                .join(' + ')} → 1× ${RESOURCES[b.output].name}</p>`;
+
+        const status = count === 0
+            ? (this.game.isBuildingUnlocked(id) ? 'Disponível para construir' : '🔒 Requer ' + (GROUPS[b.group].requires === 'metalPanel' ? 'Fundir Metais' : 'Explorar Pedreira'))
+            : `Você tem ${count} · ${speed >= 1 ? speed.toFixed(1) : (1 / speed).toFixed(1) + 's/ciclo'}`;
+
+        this.treeDetail.innerHTML = `
+            <div class="tree-detail-head" style="--chain: ${GROUPS[b.group].color}">
+                <span class="tree-detail-icon">${b.icon}</span>
+                <div>
+                    <h4>${b.name}</h4>
+                    <p class="tree-detail-group">${GROUPS[b.group].name}</p>
+                </div>
+            </div>
+            <p class="tree-detail-desc">${b.desc}</p>
+            ${inputs}
+            <div class="tree-detail-stats">
+                <span>Próximo: <strong>R$ ${this.formatMoney(this.game.getBuildingCost(id))}</strong></span>
+                <span>Autocoleta: <strong>R$ ${this.formatMoney(b.autoCollectCost)}</strong></span>
+                <span>Vende por: <strong>R$ ${this.formatMoney(RESOURCES[b.output].price)}</strong></span>
+            </div>
+            <p class="tree-detail-status">${status}</p>
+        `;
     }
 
     // ------------------------------------------------------------------ formatação
