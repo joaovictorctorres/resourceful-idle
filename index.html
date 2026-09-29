@@ -16,6 +16,7 @@
             <div class="header-content">
                 <h1>Resourceful Idle</h1>
                 <div class="header-controls">
+                    <button id="btn-achievements" class="btn-icon" title="Conquistas">🏆</button>
                     <button id="btn-settings" class="btn-icon" title="Configurações">⚙️</button>
                     <div class="money-display">
                         <span class="currency">R$</span>
@@ -57,6 +58,20 @@
                 <div class="modal-body">
                     <p class="setting-desc" id="offline-time" style="margin-bottom: 15px;"></p>
                     <div class="offline-gains" id="offline-gains"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- MODAL CONQUISTAS -->
+        <div id="achievements-modal" class="modal hidden">
+            <div class="modal-content glass-panel">
+                <div class="modal-header">
+                    <h2>🏆 Conquistas <span id="achievement-count" class="achievement-count"></span></h2>
+                    <button id="btn-close-achievements" class="btn-icon">❌</button>
+                </div>
+                <div class="modal-body">
+                    <p class="setting-desc" id="achievement-bonus-info" style="margin-bottom: 15px;"></p>
+                    <div class="achievement-grid" id="achievement-grid"></div>
                 </div>
             </div>
         </div>
@@ -482,6 +497,7 @@
         <div id="toast-container"></div>
     </div>
 
+    <script src="js/data.js"></script>
     <script src="js/game.js"></script>
     <script src="js/ui.js"></script>
     <script src="js/main.js"></script>

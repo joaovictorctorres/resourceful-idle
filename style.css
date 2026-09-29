@@ -601,3 +601,64 @@ input:checked + .slider:before {
   color: var(--accent-green);
 }
 
+/* Conquistas */
+#achievements-modal .modal-content {
+  width: 640px;
+}
+
+.achievement-count {
+  font-size: 0.9rem;
+  font-weight: 400;
+  color: var(--text-secondary);
+  margin-left: 8px;
+}
+
+.achievement-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.achievement-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--panel-border);
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.achievement-card.locked {
+  opacity: 0.45;
+  filter: grayscale(1);
+}
+
+.achievement-card.unlocked {
+  border-color: var(--accent-gold);
+  background: rgba(227, 179, 65, 0.08);
+}
+
+.achievement-icon {
+  font-size: 1.8rem;
+}
+
+.achievement-info h4 {
+  color: var(--accent-gold);
+  font-size: 0.95rem;
+  margin-bottom: 2px;
+}
+
+.achievement-info p {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+}
+
+.achievement-date {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  opacity: 0.7;
+}
+

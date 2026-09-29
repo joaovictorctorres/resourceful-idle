@@ -136,6 +136,13 @@ class GameUI {
         this.offlineGains = document.getElementById('offline-gains');
         this.offlineTime = document.getElementById('offline-time');
 
+        this.btnAchievements = document.getElementById('btn-achievements');
+        this.modalAchievements = document.getElementById('achievements-modal');
+        this.btnCloseAchievements = document.getElementById('btn-close-achievements');
+        this.achievementGrid = document.getElementById('achievement-grid');
+        this.achievementCount = document.getElementById('achievement-count');
+        this.achievementBonusInfo = document.getElementById('achievement-bonus-info');
+
         this.bindEvents();
     }
 
@@ -257,6 +264,15 @@ class GameUI {
         this.btnCloseOffline.addEventListener('click', () => {
             this.modalOffline.classList.add('hidden');
         });
+
+        this.btnAchievements.addEventListener('click', () => {
+            this.renderAchievements();
+            this.modalAchievements.classList.remove('hidden');
+        });
+
+        this.btnCloseAchievements.addEventListener('click', () => {
+            this.modalAchievements.classList.add('hidden');
+        });
     }
 
     formatMoney(value) {
@@ -268,8 +284,18 @@ class GameUI {
         return Math.floor(value).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
     }
 
-    updateUI() {
+    updateUI(force) {
         const s = this.game.state;
+
+        // Conquistas recém-desbloqueadas são postadas aqui (rodando uma vez por
+        // frame) em vez de no próprio motor, que não tem acesso à UI.
+        if (this.game.onAchievementUnlocked) {
+            const unlocked = this.game.onAchievementUnlocked;
+            this.game.onAchievementUnlocked = null;
+            for (const a of unlocked) {
+                this.showToast(`🏆 Conquista: ${a.name}! (+${(ACHIEVEMENT_BONUS * 100).toFixed(0)}% produção)`);
+            }
+        }
 
         // Settings Toggle Update
         if (this.toggleBackground.checked !== s.settings.runInBackground) {
@@ -394,7 +420,7 @@ class GameUI {
             this.btnUpgJackhammer.disabled = s.money < jackCost;
         }
         
-        this.renderStats();
+        this.renderStats(force);
     }
 
     updateBuildingUI(id, currentMoney, inputResourceCount) {
@@ -539,10 +565,16 @@ class GameUI {
         this.modalOffline.classList.remove('hidden');
     }
 
-    renderStats() {
+    renderStats(force) {
         if (!this.statsContainer) return;
 
         const s = this.game.state;
+
+        // Reconstruir 6 cards a cada frame é desperdício; só refaz quando os números
+        // realmente mudaram (ou quando forçado, p.ex. após um catch-up offline).
+        const sig = this.game.getStatsSignature();
+        if (!force && sig === this.lastStatsSignature) return;
+        this.lastStatsSignature = sig;
 
         let html = '';
         for (const id in GameUI.RESOURCE_META) {
@@ -567,5 +599,40 @@ class GameUI {
         }
 
         this.statsContainer.innerHTML = html;
+    }
+
+    // Conquistas
+    renderAchievements() {
+        if (!this.achievementGrid) return;
+
+        const s = this.game.state;
+        const unlocked = s.achievements || {};
+        const total = ACHIEVEMENTS.length;
+        const got = Object.keys(unlocked).length;
+
+        this.achievementCount.innerText = `${got} / ${total}`;
+        this.achievementBonusInfo.innerText =
+            `Cada conquista dá +${(ACHIEVEMENT_BONUS * 100).toFixed(0)}% de velocidade em toda a produção. ` +
+            `Bônus atual: +${(this.game.getAchievementBonus() * 100).toFixed(0)}%.`;
+
+        // Re-render só na mudança da contagem; abrir o modal força a lista atualizada.
+        if (this.lastAchievementCount === got && this.achievementGrid.childElementCount > 0) return;
+        this.lastAchievementCount = got;
+
+        this.achievementGrid.innerHTML = ACHIEVEMENTS.map(a => {
+            const at = unlocked[a.id];
+            const state = at ? 'unlocked' : 'locked';
+            const when = at ? new Date(at).toLocaleDateString('pt-BR') : 'Bloqueada';
+            return `
+                <div class="achievement-card ${state}">
+                    <div class="achievement-icon">${a.icon}</div>
+                    <div class="achievement-info">
+                        <h4>${a.name}</h4>
+                        <p>${a.desc}</p>
+                        <span class="achievement-date">${when}</span>
+                    </div>
+                </div>
+            `;
+        }).join('');
     }
 }

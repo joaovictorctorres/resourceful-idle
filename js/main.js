@@ -13,7 +13,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const offline = game.applyOfflineProgress();
 
     ui.updateUI(); // Força a primeira renderização visual
-    if (offline) ui.showWelcomeBack(offline);
+    if (offline) {
+        ui.showWelcomeBack(offline);
+        ui.updateUI(true); // production offline mudou as estatísticas de uma vez
+    }
 
     // Game Loop usando requestAnimationFrame customizado para Tick
     let lastTime = performance.now();

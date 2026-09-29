@@ -8,6 +8,7 @@ class IdleGame {
         this.holdingAction = null; // 'wood' ou 'stone'
         this.holdProgress = 0;
         this.autoSellTimer = 0;
+        this.achievementTimer = 0;
 
     // Estado Inicial
     this.state = this.getDefaultState();
@@ -114,6 +115,7 @@ getDefaultState() {
                 stonePanel: false,
                 smartSell: false
             },
+            achievements: {},
             lastSaveTimestamp: 0
         };
 }
@@ -131,9 +133,27 @@ getBuildingSpeed(id) {
     if (id === 'refinery' && this.state.upgrades.sharpSaws) {
         speedMultiplier = 1.1; // 10% mais rápido!
     }
+    speedMultiplier *= 1 + this.getAchievementBonus();
 
     // Itens por segundo = Quantidade * Multiplicador / Tempo Base
     return (b.count * speedMultiplier) / b.baseTime;
+}
+
+// Bônus acumulado das conquistas. Conta os ids desbloqueados em vez de manter um
+// contador no save: assim não existe campo derivado para dessincronizar.
+getAchievementBonus() {
+    const n = Object.keys(this.state.achievements || {}).length;
+    return n * ACHIEVEMENT_BONUS;
+}
+
+// Assinatura barata das estatísticas, para a UI saber se precisa redesenhar o
+// painel. Dois valores que diferem em 0.001 produzem a mesma string de propósito:
+// o painel mostra inteiros.
+getStatsSignature() {
+    const s = this.state.stats;
+    const collected = Object.values(s.totalCollected || {}).map(Math.floor).join(',');
+    const earned = Object.values(s.totalEarned || {}).map(Math.floor).join(',');
+    return `${s.manualClicks}|${collected}|${earned}`;
 }
 
 // Ações do Jogador
@@ -337,6 +357,35 @@ update(dt) {
     this.processBuilding('refinery', 'wood', 'board', dt);
     this.processBuilding('carpentry', 'board', 'furniture', dt);
     this.checkUnlocks();
+
+    // Conquistas: 1x por segundo, não a cada frame. As condições varrem o state
+    // inteiro e custariam caro a 60fps.
+    this.achievementTimer = (this.achievementTimer || 0) + dt;
+    if (this.achievementTimer >= 1) {
+        this.achievementTimer = 0;
+        this.checkAchievements();
+    }
+}
+
+// Conquistas
+checkAchievements() {
+    if (this._suppressAchievements) return [];
+
+    const s = this.state;
+    const unlocked = [];
+
+    for (const a of ACHIEVEMENTS) {
+        if (s.achievements[a.id]) continue;
+        if (a.check(s)) {
+            s.achievements[a.id] = Date.now();
+            unlocked.push(a);
+        }
+    }
+
+    if (unlocked.length > 0) {
+        this.onAchievementUnlocked = unlocked;
+    }
+    return unlocked;
 }
 
 processGenerator(id, outputResource, dt) {
@@ -468,13 +517,29 @@ applyOfflineProgress() {
 
     const before = { ...s.inventory };
     const moneyBefore = s.money;
+    // O que o catch-up vai creditar nas estatísticas. Sem o rollback abaixo,
+    // voltar de 8h com 50 lenhadores desbloquearia conquistas que valem bônus
+    // permanente sem o jogador ter jogado. O jogador ganha os recursos, não as
+    // medalhas — e conquistá-las de verdade passa a ser mais rápido, porque
+    // progresso jogado não é devolvido.
+    const statsBefore = JSON.stringify(s.stats);
 
-    for (let i = 0; i < steps; i++) {
-        // O último passo é o resto, para os chunks somarem `capped` exatos em vez
-        // de arredondar para cima (241s viravam 242s e pagavam 1 item a mais).
-        const dt = (i === steps - 1) ? capped - chunkSize * (steps - 1) : chunkSize;
-        this.update(dt);
+    // update() roda checkAchievements() a cada segundo simulado. Desligar aqui é o
+    // que realmente impede as conquistas — restaurar as stats depois já não desfaz
+    // uma conquista que entrou em state.achievements no meio dos chunks.
+    this._suppressAchievements = true;
+    try {
+        for (let i = 0; i < steps; i++) {
+            // O último passo é o resto, para os chunks somarem `capped` exatos em vez
+            // de arredondar para cima (241s viravam 242s e pagavam 1 item a mais).
+            const dt = (i === steps - 1) ? capped - chunkSize * (steps - 1) : chunkSize;
+            this.update(dt);
+        }
+    } finally {
+        this._suppressAchievements = false;
     }
+
+    s.stats = JSON.parse(statsBefore);
 
     const gained = {};
     for (const item in s.inventory) {
