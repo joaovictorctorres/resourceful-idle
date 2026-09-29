@@ -1,7 +1,10 @@
+// Teto de progresso offline: 8 horas. Ausências maiores rendem este teto.
+const OFFLINE_CAP_SECONDS = 8 * 60 * 60;
+const OFFLINE_MAX_CHUNKS = 240;
+
 class IdleGame {
     constructor() {
         this.version = "1.2.0";
-        this.lastSaveTime = 0;
         this.holdingAction = null; // 'wood' ou 'stone'
         this.holdProgress = 0;
         this.autoSellTimer = 0;
@@ -110,7 +113,8 @@ getDefaultState() {
                 continuousClick: false,
                 stonePanel: false,
                 smartSell: false
-            }
+            },
+            lastSaveTimestamp: 0
         };
 }
 
@@ -303,7 +307,9 @@ update(dt) {
     // Lógica de Venda Automática (Smart Sell)
     if (this.state.unlocks.smartSell) {
         this.autoSellTimer += dt;
-        if (this.autoSellTimer >= 10) { // A cada 10 segundos
+        // while, não if: com o catch-up offline o dt pode ser de minutos, e um `if`
+        // pagaria um único ciclo por chunk em vez de um a cada 10s.
+        while (this.autoSellTimer >= 10) {
             // Pega cada recurso do inventário
             for (const item in this.state.autoSell) {
                 if (this.state.autoSell[item] === true && this.state.inventory[item] > 0) {
@@ -365,9 +371,6 @@ processBuilding(id, inputResource, outputResource, dt) {
     // Limita o progresso se não houver recursos
     if (this.state.inventory[inputResource] > 0) {
         b.progress += speed * dt;
-    } else if (b.progress > 1) {
-        // Se acabou recurso no meio do processamento, capa em 1 (fica aguardando).
-        b.progress = 1;
     }
 
     // Processa todos os itens completos acumulados no progresso
@@ -441,10 +444,60 @@ processComplexBuilding(bId, inputsArray, outputResource, dt) {
     }
 }
 
+// Progresso Offline
+//
+// Reexecuta o update() existente em chunks em vez de usar fórmula fechada: os
+// process* são dt-agnósticos (progress += speed*dt + while), então chunked equivale
+// a simulação fina e ainda respeita o esgotamento de insumo em cadeia.
+applyOfflineProgress() {
+    const s = this.state;
+
+    // Save antigo (pré-offline) não tem timestamp: nada a pagar, senão todo jogador
+    // existente ganharia 8h grátis no primeiro load.
+    if (!s.lastSaveTimestamp) return null;
+
+    const elapsed = (Date.now() - s.lastSaveTimestamp) / 1000;
+    // Relógio do sistema alterado / NaN / ausência negativa → não simula nada.
+    if (!Number.isFinite(elapsed) || elapsed <= 0) return null;
+
+    const capped = Math.min(elapsed, OFFLINE_CAP_SECONDS);
+    // n derivado do chunk, não um loop de tamanho fixo: senão uma ausência de
+    // 241s pagaria 480s.
+    const chunkSize = Math.max(1, Math.ceil(capped / OFFLINE_MAX_CHUNKS));
+    const steps = Math.ceil(capped / chunkSize);
+
+    const before = { ...s.inventory };
+    const moneyBefore = s.money;
+
+    for (let i = 0; i < steps; i++) {
+        // O último passo é o resto, para os chunks somarem `capped` exatos em vez
+        // de arredondar para cima (241s viravam 242s e pagavam 1 item a mais).
+        const dt = (i === steps - 1) ? capped - chunkSize * (steps - 1) : chunkSize;
+        this.update(dt);
+    }
+
+    const gained = {};
+    for (const item in s.inventory) {
+        const diff = s.inventory[item] - (before[item] || 0);
+        if (diff > 0) gained[item] = Math.floor(diff);
+    }
+
+    return {
+        elapsed,
+        capped,
+        wasCapped: elapsed > OFFLINE_CAP_SECONDS,
+        gained,
+        moneyGained: Math.floor(s.money - moneyBefore)
+    };
+}
+
 // Persistência
 save() {
+    // Carimba aqui, não no fim do catch-up: se o timestamp só fosse atualizado na
+    // rotina offline, fechar a aba logo após o catch-up salvaria o timestamp velho
+    // e o próximo load pagaria o período de novo.
+    this.state.lastSaveTimestamp = Date.now();
     localStorage.setItem('idleGameSave', JSON.stringify(this.state));
-    this.lastSaveTime = Date.now();
 }
 
 load() {
@@ -459,11 +512,11 @@ load() {
             this.state.inventory = { ...this.getDefaultState().inventory, ...saveObj.inventory };
             this.state.autoSell = { ...this.getDefaultState().autoSell, ...saveObj.autoSell };
             this.state.settings = { ...this.getDefaultState().settings, ...saveObj.settings };
-            
+
             this.state.stats = { ...this.getDefaultState().stats, ...saveObj.stats };
             this.state.stats.totalCollected = { ...this.getDefaultState().stats.totalCollected, ...(saveObj.stats?.totalCollected || {}) };
             this.state.stats.totalEarned = { ...this.getDefaultState().stats.totalEarned, ...(saveObj.stats?.totalEarned || {}) };
-            
+
             this.state.unlocks = { ...this.getDefaultState().unlocks, ...saveObj.unlocks };
             this.state.upgrades = { ...this.getDefaultState().upgrades, ...saveObj.upgrades };
 

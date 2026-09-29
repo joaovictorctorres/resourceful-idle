@@ -128,8 +128,13 @@ class GameUI {
         this.btnUpgSmartSell = document.getElementById('btn-upg-smartSell');
 
         this.autoSellItems = ['wood', 'board', 'furniture', 'stone', 'stoneBlock', 'constructionMat'];
-        
+
         this.statsContainer = document.getElementById('stats-container');
+
+        this.modalOffline = document.getElementById('offline-modal');
+        this.btnCloseOffline = document.getElementById('btn-close-offline');
+        this.offlineGains = document.getElementById('offline-gains');
+        this.offlineTime = document.getElementById('offline-time');
 
         this.bindEvents();
     }
@@ -248,10 +253,19 @@ class GameUI {
             this.game.buyStoneUnlock();
             this.updateUI();
         });
+
+        this.btnCloseOffline.addEventListener('click', () => {
+            this.modalOffline.classList.add('hidden');
+        });
     }
 
     formatMoney(value) {
         return value.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,');
+    }
+
+    // Contagem inteira de recursos — formatMoney aqui viraria "1,234.00".
+    formatCount(value) {
+        return Math.floor(value).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
     }
 
     updateUI() {
@@ -298,9 +312,9 @@ class GameUI {
         });
 
         // Botões de Venda P/ Ativação
-        this.btnSellWood.disabled = s.inventory.wood === 0;
-        this.btnSellBoard.disabled = s.inventory.board === 0;
-        this.btnSellFurniture.disabled = s.inventory.furniture === 0;
+        if (this.btnSellWood) this.btnSellWood.disabled = s.inventory.wood === 0;
+        if (this.btnSellBoard) this.btnSellBoard.disabled = s.inventory.board === 0;
+        if (this.btnSellFurniture) this.btnSellFurniture.disabled = s.inventory.furniture === 0;
         if (this.btnSellStone) this.btnSellStone.disabled = s.inventory.stone === 0;
         if (this.btnSellStoneBlock) this.btnSellStoneBlock.disabled = s.inventory.stoneBlock === 0;
         if (this.btnSellConstructionMat) this.btnSellConstructionMat.disabled = s.inventory.constructionMat === 0;
@@ -453,6 +467,19 @@ class GameUI {
         }
     }
 
+    // Nomes/ícones por id. Extraído do array local que vivia dentro de renderStats,
+    // agora compartilhado com o modal de offline. Substitui o data.js da Fase 3.
+    static get RESOURCE_META() {
+        return {
+            wood:          { name: 'Madeira',           icon: '🪵' },
+            board:         { name: 'Tábuas',            icon: '🪚' },
+            furniture:     { name: 'Móveis',            icon: '🪑' },
+            stone:         { name: 'Pedra',             icon: '🪨' },
+            stoneBlock:    { name: 'Blocos de Pedra',   icon: '🧱' },
+            constructionMat:{ name: 'Mat. Construção',   icon: '🏗️' }
+        };
+    }
+
     showToast(message) {
         const container = document.getElementById('toast-container');
         const toast = document.createElement('div');
@@ -467,25 +494,62 @@ class GameUI {
             }
         }, 3000);
     }
-    
+
+    formatDuration(seconds) {
+        const h = Math.floor(seconds / 3600);
+        const m = Math.floor((seconds % 3600) / 60);
+        if (h > 0) return `${h}h ${m}min`;
+        if (m > 0) return `${m}min`;
+        return `${Math.floor(seconds)}s`;
+    }
+
+    showWelcomeBack(report) {
+        const entries = Object.keys(report.gained);
+
+        // Nada produzido (ex: só processadores sem insumo) → não incomoda o jogador.
+        if (entries.length === 0 && report.moneyGained <= 0) return;
+
+        this.offlineTime.innerText = report.wasCapped
+            ? `Você ficou ${this.formatDuration(report.elapsed)} fora. O jogo simula no máximo 8h de produção.`
+            : `Você ficou ${this.formatDuration(report.elapsed)} fora.`;
+
+        const meta = GameUI.RESOURCE_META;
+        let html = '';
+        entries.forEach(id => {
+            const m = meta[id] || { name: id, icon: '📦' };
+            html += `
+                <div class="offline-gain-row">
+                    <span class="offline-gain-icon">${m.icon}</span>
+                    <span class="offline-gain-name">${m.name}</span>
+                    <span class="offline-gain-value">+${this.formatCount(report.gained[id])}</span>
+                </div>
+            `;
+        });
+        if (report.moneyGained > 0) {
+            html += `
+                <div class="offline-gain-row">
+                    <span class="offline-gain-icon">💰</span>
+                    <span class="offline-gain-name">Venda automática</span>
+                    <span class="offline-gain-value">R$ ${this.formatMoney(report.moneyGained)}</span>
+                </div>
+            `;
+        }
+
+        this.offlineGains.innerHTML = html;
+        this.modalOffline.classList.remove('hidden');
+    }
+
     renderStats() {
         if (!this.statsContainer) return;
-        
+
         const s = this.game.state;
-        const resources = [
-            { id: 'wood', name: 'Madeira', icon: '🪵' },
-            { id: 'board', name: 'Tábuas', icon: '🪚' },
-            { id: 'furniture', name: 'Móveis', icon: '🪑' },
-            { id: 'stone', name: 'Pedra', icon: '🪨' },
-            { id: 'stoneBlock', name: 'Blocos de Pedra', icon: '🧱' },
-            { id: 'constructionMat', name: 'Mat. Construção', icon: '🏗️' }
-        ];
 
         let html = '';
-        resources.forEach(res => {
-            const collected = s.stats.totalCollected[res.id] || 0;
-            const earned = s.stats.totalEarned[res.id] || 0;
-            
+        for (const id in GameUI.RESOURCE_META) {
+            const res = GameUI.RESOURCE_META[id];
+            const collected = s.stats.totalCollected[id] || 0;
+            const earned = s.stats.totalEarned[id] || 0;
+
             if (collected > 0) {
                 html += `
                     <div class="stat-card" style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; border: 1px solid var(--panel-border);">
@@ -500,8 +564,8 @@ class GameUI {
                     </div>
                 `;
             }
-        });
-        
+        }
+
         this.statsContainer.innerHTML = html;
     }
 }
